@@ -13,12 +13,14 @@ class Player(pygame.sprite.Sprite):
         aux = pygame.image.load('assets/sprites/knight.png')
         self.image = pygame.transform.scale(aux, size)
         self.rect = pygame.Rect(posicao, size)
+        self.velocidade = pygame.math.Vector2(0, 0)
         
     def update(self):
 
-        self.velocidade = pygame.math.Vector2(0, 0)
-
         self.key = pygame.key.get_pressed()
+
+        self.velocidade.x = 0
+        self.velocidade.y = 0
 
         if self.key[pygame.K_w]:
             self.velocidade.y = -10
@@ -31,9 +33,25 @@ class Player(pygame.sprite.Sprite):
 
         self.rect.move_ip(*self.velocidade)
         
+        if self.rect.x < 380: self.rect.x = 380
+        if self.rect.x > 820: self.rect.x = 820
+        if self.rect.y < 160: self.rect.y = 160
+        if self.rect.y > 480: self.rect.y = 480
+            
+        
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self):
-        pass
+    def __init__(self, posicao):
+        super(Enemy, self).__init__()
+        size = (80,80)
+        aux = pygame.image.load('assets/sprites/skeleton.png')
+        self.image = pygame.transform.scale(aux, size)
+        self.rect = pygame.Rect(posicao, size)
+        self.velocidade = pygame.math.Vector2(0, 0)
+
+    def update(self):
+        self.velocidade.x = -1
+        self.velocidade.y = -1
+        self.rect.move_ip(*self.velocidade)
 
 class Object(pygame.sprite.Sprite):
     def __init__(self):
@@ -51,7 +69,8 @@ class Game:
         pygame.display.set_caption('Claustrophobia the Game! 🤤')
         self.relogio = pygame.time.Clock()
         player1 = Player((LARGURA/2 - 40, ALTURA/2 - 40))
-        self.todo_mundo = pygame.sprite.Group([player1])
+        inimigo1 = Enemy((LARGURA - 200, ALTURA - 200))
+        self.todo_mundo = pygame.sprite.Group([player1, inimigo1])
         
     def desenhar(self):
         self.window.fill(PRETO)
@@ -61,7 +80,6 @@ class Game:
         pygame.display.update()
         
     def executar(self):
-        i = 0
         while self.rodando:
 
             for event in pygame.event.get():
@@ -70,7 +88,6 @@ class Game:
 
             self.desenhar()
             self.relogio.tick(FPS)
-            i = (i + 1) % 60
 
         pygame.quit()
         
