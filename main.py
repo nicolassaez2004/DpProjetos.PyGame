@@ -33,10 +33,10 @@ class Player(pygame.sprite.Sprite):
 
         self.rect.move_ip(*self.velocidade)
         
-        if self.rect.x < 380: self.rect.x = 380
+'''        if self.rect.x < 380: self.rect.x = 380
         if self.rect.x > 820: self.rect.x = 820
         if self.rect.y < 160: self.rect.y = 160
-        if self.rect.y > 480: self.rect.y = 480
+        if self.rect.y > 480: self.rect.y = 480'''
             
         
 class Enemy(pygame.sprite.Sprite):
@@ -55,27 +55,52 @@ class Enemy(pygame.sprite.Sprite):
 
 class Object(pygame.sprite.Sprite):
     def __init__(self):
-        pass
+        super().__init__()
+
+        self.rect_brick_cima = pygame.Rect(400, 160, 480, 40)
+        self.rect_brick_baixo = pygame.Rect(400, 560, 480, 40)
+        self.rect_brick_esquerda = pygame.Rect(360, 160, 40, 400)
+        self.rect_brick_direita = pygame.Rect(880, 200, 40, 360)
+
+    def colision(self, player):
+        if player.rect.colliderect(self.rect_brick_cima):
+            player.rect.top = self.rect_brick_cima.bottom
+
+        if player.rect.colliderect(self.rect_brick_baixo):
+            player.rect.bottom = self.rect_brick_baixo.top
+
+        if player.rect.colliderect(self.rect_brick_esquerda):
+            player.rect.left = self.rect_brick_esquerda.right
+
+        if player.rect.colliderect(self.rect_brick_direita):
+            player.rect.right = self.rect_brick_direita.left
 
 class Game:
     def __init__(self):
-        
         self.rodando = True
-        
         pygame.init()
+
         self.bg = pygame.image.load('assets/sprites/background.jpg')
         self.bg = pygame.transform.scale(self.bg, (1280, 720))
         self.window = pygame.display.set_mode((LARGURA, ALTURA))
-        pygame.display.set_caption('Claustrophobia the Game! 🤤')
+        pygame.display.set_caption('Claustrophobia Knight')
+
         self.relogio = pygame.time.Clock()
-        player1 = Player((LARGURA/2 - 40, ALTURA/2 - 40))
-        inimigo1 = Enemy((LARGURA - 200, ALTURA - 200))
-        self.todo_mundo = pygame.sprite.Group([player1, inimigo1])
+
+        self.player = Player((LARGURA/2 - 40, ALTURA/2 - 40))
+        self.inimigo1 = Enemy((LARGURA - 200, ALTURA - 200))
+        self.todo_mundo = pygame.sprite.Group([self.player, self.inimigo1])
+
+        self.objeto = Object()
         
     def desenhar(self):
         self.window.fill(PRETO)
         self.window.blit(self.bg, (0, 0))
+
         self.todo_mundo.update()
+
+        self.objeto.colision(self.player)
+        
         self.todo_mundo.draw(self.window)
         pygame.display.update()
         
