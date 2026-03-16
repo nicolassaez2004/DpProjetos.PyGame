@@ -13,10 +13,13 @@ class Player(pygame.sprite.Sprite):
         aux = pygame.image.load('assets/sprites/knight.png')
         self.image = pygame.transform.scale(aux, size)
         self.rect = pygame.Rect(posicao, size)
-        self.velocidade = pygame.math.Vector2(0,0)
         
     def update(self):
+
+        self.velocidade = pygame.math.Vector2(0, 0)
+
         self.key = pygame.key.get_pressed()
+
         if self.key[pygame.K_w]:
             self.velocidade.y = -10
         if self.key[pygame.K_s]:
@@ -25,7 +28,7 @@ class Player(pygame.sprite.Sprite):
             self.velocidade.x = -10
         if self.key[pygame.K_d]:
             self.velocidade.x = 10
-        
+
         self.rect.move_ip(*self.velocidade)
         
 class Enemy(pygame.sprite.Sprite):
