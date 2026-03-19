@@ -4,6 +4,7 @@ import random
 LARGURA = 1280
 ALTURA = 720
 PRETO = (0, 0, 0)
+MOUSE_COLOR = (255, 255, 255)
 FPS = 60
 
 class Player(pygame.sprite.Sprite):
@@ -13,6 +14,7 @@ class Player(pygame.sprite.Sprite):
         aux = pygame.image.load('assets/sprites/knight.png')
         self.image = pygame.transform.scale(aux, size)
         self.rect = pygame.Rect(posicao, size)
+        self.mask = pygame.mask.from_surface(self.image)
         self.velocidade = pygame.math.Vector2(0, 0)
         
     def update(self):
@@ -33,48 +35,33 @@ class Player(pygame.sprite.Sprite):
 
         self.rect.move_ip(*self.velocidade)
         
-'''        if self.rect.x < 380: self.rect.x = 380
+        if self.rect.x < 380: self.rect.x = 380
         if self.rect.x > 820: self.rect.x = 820
         if self.rect.y < 160: self.rect.y = 160
-        if self.rect.y > 480: self.rect.y = 480'''
+        if self.rect.y > 480: self.rect.y = 480
             
         
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, posicao):
         super(Enemy, self).__init__()
-        size = (80,80)
+        size = (80, 80)
         aux = pygame.image.load('assets/sprites/skeleton.png')
         self.image = pygame.transform.scale(aux, size)
         self.rect = pygame.Rect(posicao, size)
         self.velocidade = pygame.math.Vector2(0, 0)
 
     def update(self):
-        self.velocidade.x = -1
-        self.velocidade.y = -1
         self.rect.move_ip(*self.velocidade)
 
 class Object(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
 
-        self.rect_brick_cima = pygame.Rect(400, 160, 480, 40)
+        self.rect_brick_cima = pygame.Rect(400, 120, 480, 40)
         self.rect_brick_baixo = pygame.Rect(400, 560, 480, 40)
         self.rect_brick_esquerda = pygame.Rect(360, 160, 40, 400)
-        self.rect_brick_direita = pygame.Rect(880, 200, 40, 360)
-
-    def colision(self, player):
-        if player.rect.colliderect(self.rect_brick_cima):
-            player.rect.top = self.rect_brick_cima.bottom
-
-        if player.rect.colliderect(self.rect_brick_baixo):
-            player.rect.bottom = self.rect_brick_baixo.top
-
-        if player.rect.colliderect(self.rect_brick_esquerda):
-            player.rect.left = self.rect_brick_esquerda.right
-
-        if player.rect.colliderect(self.rect_brick_direita):
-            player.rect.right = self.rect_brick_direita.left
-
+        self.rect_brick_direita = pygame.Rect(880, 160, 40, 400)
+            
 class Game:
     def __init__(self):
         self.rodando = True
@@ -87,23 +74,53 @@ class Game:
 
         self.relogio = pygame.time.Clock()
 
+        self.mouse_pos = pygame.Rect((0, 0), (0, 0))
+        
         self.player = Player((LARGURA/2 - 40, ALTURA/2 - 40))
-        self.inimigo1 = Enemy((LARGURA - 200, ALTURA - 200))
+        
+        self.randomizacao()
+        self.inimigo1 = Enemy((self.spawn_pos))
         self.todo_mundo = pygame.sprite.Group([self.player, self.inimigo1])
 
         self.objeto = Object()
+        
+    def randomizacao(self):
+        self.spawn_pos = ()
+        lado = random.randint(1, 4)
+        if lado == 1: #cima
+            self.spawn_pos = (random.randint(80, 1200), -80)
+        if lado == 2: #baixo
+            self.spawn_pos = (random.randint(80, 1200), 660)
+        if lado == 3: #esquerda
+            self.spawn_pos = (-80, random.randint(80, 660))
+        if lado == 4: #direita
+            self.spawn_pos = (1200, random.randint(80, 660))
         
     def desenhar(self):
         self.window.fill(PRETO)
         self.window.blit(self.bg, (0, 0))
 
         self.todo_mundo.update()
-
-        self.objeto.colision(self.player)
+        self.inimigo1.velocidade = ((self.player.rect.x-self.inimigo1.rect.x)//200,
+                              (self.player.rect.y-self.inimigo1.rect.y)//200)
+        
+        mouse_pos = pygame.mouse.get_pos()
+        tamanho_mouse = 10
+        self.mouse_pos = pygame.Rect(mouse_pos[0], mouse_pos[1], tamanho_mouse, tamanho_mouse)
+        #pygame.draw.rect(self.window, (MOUSE_COLOR), self.mouse_pos)
         
         self.todo_mundo.draw(self.window)
         pygame.display.update()
         
+    def colisoes(self):
+        pass
+    
+        # global MOUSE_COLOR
+        # if self.mouse_pos.colliderect(self.player):
+        #     MOUSE_COLOR = (125, 0, 0)
+        # else:
+        #     MOUSE_COLOR = (255, 255, 255)
+
     def executar(self):
         while self.rodando:
 
@@ -112,6 +129,7 @@ class Game:
                     self.rodando = False
 
             self.desenhar()
+            self.colisoes()
             self.relogio.tick(FPS)
 
         pygame.quit()
