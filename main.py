@@ -1,5 +1,6 @@
 import pygame
 import random
+import time
 
 LARGURA = 1280
 ALTURA = 720
@@ -18,7 +19,6 @@ class Player(pygame.sprite.Sprite):
         self.velocidade = pygame.math.Vector2(0, 0)
         
     def update(self):
-
         self.key = pygame.key.get_pressed()
 
         self.velocidade.x = 0
@@ -40,7 +40,6 @@ class Player(pygame.sprite.Sprite):
         if self.rect.y < 160: self.rect.y = 160
         if self.rect.y > 480: self.rect.y = 480
             
-        
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, posicao):
         super().__init__()
@@ -65,16 +64,73 @@ class Skeleton(Enemy):
         self.direcao = pygame.math.Vector2(0, 0)
         self.distancia_percorrida = 0
 
+        self.estado = 0
+        self.direcaorandom = 0
+
     def update(self):
-        pos_atual = pygame.math.Vector2(self.rect.topleft)
-        distancia = pos_atual.distance_to(self.pos_inicial)
+        direcao = pygame.math.Vector2(
+            self.player.rect.centerx - self.rect.centerx,
+            self.player.rect.centery - self.rect.centery
+        )
+        distancia = direcao.length()
+        if distancia != 0:
+            direcao = direcao.normalize()
+
+        if self.distancia_percorrida < 160:
+            self.velocidade = direcao * self.speed
+            self.distancia_percorrida += self.velocidade.length()
+            new_rect = self.rect.copy()
+            rect_x = new_rect.move(self.velocidade.x, 0)
+            if not rect_x.colliderect(self.objeto.plataforma):
+                new_rect.x = rect_x.x
+            rect_y = new_rect.move(0, self.velocidade.y)
+            if not rect_y.colliderect(self.objeto.plataforma):
+                new_rect.y = rect_y.y
+            self.rect = new_rect
+            return
 
         if distancia < 160:
-            self.rect.move_ip(*self.velocidade)
+            self.velocidade = direcao * self.speed
         else:
-            self.velocidade = pygame.math.Vector2(0, 0)
-        
-        self.rect.move_ip(*self.velocidade)
+            self.timer += 1
+            if self.timer > 60:
+                self.timer = 0
+                self.estado = random.randint(1, 2)
+                if self.estado == 1:
+                    self.velocidade = pygame.math.Vector2(0, 0)
+                else:
+                    direcao_random = random.randint(1, 4)
+
+                    if direcao_random == 1:
+                        self.velocidade = pygame.math.Vector2(0, -self.speed)
+                    if direcao_random == 2:
+                        self.velocidade = pygame.math.Vector2(0, self.speed)
+                    if direcao_random == 3:
+                        self.velocidade = pygame.math.Vector2(-self.speed, 0)
+                    if direcao_random == 4:
+                        self.velocidade = pygame.math.Vector2(self.speed, 0)
+
+        new_rect = self.rect.copy()
+
+        if self.velocidade.x != 0:
+            rect_x = new_rect.move(self.velocidade.x, 0)
+            if rect_x.left < 80:
+                rect_x.left = 80
+            if rect_x.right > 1200:
+                rect_x.right = 1200
+            if not rect_x.colliderect(self.objeto.plataforma):
+                new_rect.x = rect_x.x
+
+        if self.velocidade.y != 0:
+            rect_y = new_rect.move(0, self.velocidade.y)
+            if rect_y.top < 80:
+                rect_y.top = 80
+            if rect_y.bottom > 640:
+                rect_y.bottom = 640
+            if not rect_y.colliderect(self.objeto.plataforma):
+                new_rect.y = rect_y.y
+
+        self.rect = new_rect
 
 class Wizard(Enemy):
     def __init__(self, posicao):
@@ -115,13 +171,14 @@ class Game:
         self.relogio = pygame.time.Clock()
 
         self.mouse_pos = pygame.Rect((0, 0), (0, 0))
-        
         self.player = Player((LARGURA/2 - 40, ALTURA/2 - 40))
 
         self.randomizacao()
-        self.inimigo1 = Skeleton(self.spawn_pos)
-        self.todo_mundo = pygame.sprite.Group([self.player, self.inimigo1])
         self.objeto = Object()
+        self.skeleton = Skeleton(self.spawn_pos)
+        self.skeleton.player = self.player
+        self.skeleton.objeto = self.objeto
+        self.todo_mundo = pygame.sprite.Group([self.player, self.skeleton])
         
     def randomizacao(self):
         self.spawn_pos = ()
@@ -134,18 +191,14 @@ class Game:
             self.spawn_pos = (-80, random.randint(80, 660))
         if lado == 4: #direita
             self.spawn_pos = (1200, random.randint(80, 660))
+
+        self.pos_atual = self.spawn_pos
         
     def desenhar(self):
         self.window.fill(PRETO)
         self.window.blit(self.bg, (0, 0))
-
-        direcao = pygame.math.Vector2(self.player.rect.x - self.inimigo1.rect.x,
-                                      self.player.rect.y - self.inimigo1.rect.y)
-        if direcao.length() != 0:
-            direcao = direcao.normalize()
         
-        self.inimigo1.velocidade = direcao * 2
-        
+        self.skeleton.update()
         self.todo_mundo.update()
 
         mouse_pos = pygame.mouse.get_pos()
@@ -158,10 +211,12 @@ class Game:
         
     def colisoes(self):  
         global MOUSE_COLOR
-        if self.mouse_pos.colliderect(self.objeto.plataforma):
-             MOUSE_COLOR = (125, 0, 0)
+        if self.mouse_pos.colliderect(self.skeleton.rect):
+            MOUSE_COLOR = (0, 255, 0)
+        elif self.mouse_pos.colliderect(self.objeto.plataforma):
+            MOUSE_COLOR = (125, 0, 0)
         else:
-             MOUSE_COLOR = (255, 255, 255)
+            MOUSE_COLOR = (255, 255, 255)
 
     def executar(self):
         while self.rodando:
