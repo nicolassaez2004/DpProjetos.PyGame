@@ -43,24 +43,64 @@ class Player(pygame.sprite.Sprite):
         
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, posicao):
-        super(Enemy, self).__init__()
-        size = (80, 80)
-        aux = pygame.image.load('assets/sprites/skeleton.png')
-        self.image = pygame.transform.scale(aux, size)
-        self.rect = pygame.Rect(posicao, size)
+        super().__init__()
+
+        self.health = 10
+        self.damage = 10
+        self.speed = 2
+
+        self.pos_inicial = pygame.math.Vector2(posicao)
+        self.rect = pygame.Rect(posicao, (80, 80))
         self.velocidade = pygame.math.Vector2(0, 0)
 
+class Skeleton(Enemy):
+    def __init__(self, posicao):
+        super().__init__(posicao)
+
+        aux = pygame.image.load('assets/sprites/skeleton.png')
+        self.image = pygame.transform.scale(aux, (80, 80))
+
+        self.estado = "indo_player"
+        self.timer = 0  
+        self.direcao = pygame.math.Vector2(0, 0)
+        self.distancia_percorrida = 0
+
     def update(self):
+        pos_atual = pygame.math.Vector2(self.rect.topleft)
+        distancia = pos_atual.distance_to(self.pos_inicial)
+
+        if distancia < 160:
+            self.rect.move_ip(*self.velocidade)
+        else:
+            self.velocidade = pygame.math.Vector2(0, 0)
+        
         self.rect.move_ip(*self.velocidade)
+
+class Wizard(Enemy):
+    def __init__(self, posicao):
+        super().__init__(posicao)
+
+        aux = pygame.image.load('assets/sprites/wizard.png')
+        self.image = pygame.transform.scale(aux, (80, 80))
+
+    def update(self):
+        pass
+
+class Ghost(Enemy):
+    def __init__(self, posicao):
+        super().__init__(posicao)
+
+        aux = pygame.image.load('assets/sprites/ghost.png')
+        self.image = pygame.transform.scale(aux, (80, 80))
+
+    def update(self):
+        pass
 
 class Object(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
 
-        self.rect_brick_cima = pygame.Rect(400, 120, 480, 40)
-        self.rect_brick_baixo = pygame.Rect(400, 560, 480, 40)
-        self.rect_brick_esquerda = pygame.Rect(360, 160, 40, 400)
-        self.rect_brick_direita = pygame.Rect(880, 160, 40, 400)
+        self.plataforma = pygame.Rect(360, 120, 560, 480)
             
 class Game:
     def __init__(self):
@@ -77,11 +117,10 @@ class Game:
         self.mouse_pos = pygame.Rect((0, 0), (0, 0))
         
         self.player = Player((LARGURA/2 - 40, ALTURA/2 - 40))
-        
-        self.randomizacao()
-        self.inimigo1 = Enemy((self.spawn_pos))
-        self.todo_mundo = pygame.sprite.Group([self.player, self.inimigo1])
 
+        self.randomizacao()
+        self.inimigo1 = Skeleton(self.spawn_pos)
+        self.todo_mundo = pygame.sprite.Group([self.player, self.inimigo1])
         self.objeto = Object()
         
     def randomizacao(self):
@@ -100,26 +139,29 @@ class Game:
         self.window.fill(PRETO)
         self.window.blit(self.bg, (0, 0))
 
-        self.todo_mundo.update()
-        self.inimigo1.velocidade = ((self.player.rect.x-self.inimigo1.rect.x)//200,
-                              (self.player.rect.y-self.inimigo1.rect.y)//200)
+        direcao = pygame.math.Vector2(self.player.rect.x - self.inimigo1.rect.x,
+                                      self.player.rect.y - self.inimigo1.rect.y)
+        if direcao.length() != 0:
+            direcao = direcao.normalize()
         
+        self.inimigo1.velocidade = direcao * 2
+        
+        self.todo_mundo.update()
+
         mouse_pos = pygame.mouse.get_pos()
         tamanho_mouse = 10
         self.mouse_pos = pygame.Rect(mouse_pos[0], mouse_pos[1], tamanho_mouse, tamanho_mouse)
-        #pygame.draw.rect(self.window, (MOUSE_COLOR), self.mouse_pos)
+        pygame.draw.rect(self.window, (MOUSE_COLOR), self.mouse_pos)
         
         self.todo_mundo.draw(self.window)
         pygame.display.update()
         
-    def colisoes(self):
-        pass
-    
-        # global MOUSE_COLOR
-        # if self.mouse_pos.colliderect(self.player):
-        #     MOUSE_COLOR = (125, 0, 0)
-        # else:
-        #     MOUSE_COLOR = (255, 255, 255)
+    def colisoes(self):  
+        global MOUSE_COLOR
+        if self.mouse_pos.colliderect(self.objeto.plataforma):
+             MOUSE_COLOR = (125, 0, 0)
+        else:
+             MOUSE_COLOR = (255, 255, 255)
 
     def executar(self):
         while self.rodando:
