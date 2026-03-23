@@ -10,13 +10,17 @@ FPS = 60
 class Player(pygame.sprite.Sprite):
     def __init__(self, posicao):
         super(Player, self).__init__()
+        aux_combate = ['soco', 'espada', 'arco_soco', 'arco_espada']
+        aux_movimento = ['parado', 'andando', 'batendo']
         size = (80,80)
+        self.estado_combate = aux_combate[0]
+        self.estado_movimento = aux_movimento[0]
+        
         aux = pygame.image.load('assets/sprites/knight.png')
         self.image = pygame.transform.scale(aux, size)
         self.rect = pygame.Rect(posicao, size)
         self.mask = pygame.mask.from_surface(self.image)
         self.velocidade = pygame.math.Vector2(0, 0)
-        self.estado_combate = ['soco', 'espada', 'arco_soco', 'arco_espada']
         
     def movimentacao(self):
         self.key = pygame.key.get_pressed()
