@@ -205,8 +205,32 @@ class Ghost(Enemy):
         aux = pygame.image.load('assets/sprites/ghost.png')
         self.image = pygame.transform.scale(aux, (80, 80))
 
+        self.timer = 0  
+        self.direcao = pygame.math.Vector2(0, 0)
+        self.distancia_percorrida = 0
+
+        self.direcaorandom = 0
+
     def movimentacao(self):
-        pass
+        direcao = pygame.math.Vector2(
+            self.player.rect.centerx - self.rect.centerx,
+            self.player.rect.centery - self.rect.centery
+        )
+        distancia = direcao.length()
+        if distancia != 0:
+            direcao = direcao.normalize()
+            
+        self.velocidade = direcao * self.speed
+        self.rect.move_ip(*self.velocidade)
+
+        if self.rect.left < 0:
+            self.rect.left = 0
+        if self.rect.right > LARGURA:
+            self.rect.right = LARGURA
+        if self.rect.top < 0:
+            self.rect.top = 0
+        if self.rect.bottom > ALTURA:
+            self.rect.bottom = ALTURA
 
 class Object(pygame.sprite.Sprite):
     def __init__(self):
@@ -237,7 +261,11 @@ class Game:
         self.spawn_wizard_pos = self.spawn_wizard()
         self.wizard = Wizard(self.spawn_wizard_pos)
         self.wizard.objeto = self.objeto
-        self.todo_mundo = pygame.sprite.Group([self.player, self.skeleton, self.wizard])
+        self.spawn_ghost_pos = self.randomizacao()
+        self.ghost = Ghost(self.spawn_ghost_pos)
+        self.ghost.player = self.player
+        self.ghost.objeto = self.objeto
+        self.todo_mundo = pygame.sprite.Group([self.player, self.skeleton, self.wizard, self.ghost])
         
     def randomizacao(self):
         self.spawn_pos = ()
@@ -252,6 +280,7 @@ class Game:
             self.spawn_pos = (1200, random.randint(80, 660))
 
         self.pos_atual = self.spawn_pos
+        return self.spawn_pos
         
     def spawn_wizard(self):
         while True:
@@ -267,6 +296,7 @@ class Game:
         
         self.skeleton.movimentacao()
         self.wizard.movimentacao()
+        self.ghost.movimentacao()
         self.todo_mundo.update()
 
         mouse_pos = pygame.mouse.get_pos()
