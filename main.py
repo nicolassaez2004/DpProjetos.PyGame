@@ -18,7 +18,7 @@ class Player(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.velocidade = pygame.math.Vector2(0, 0)
         
-    def update(self):
+    def movimentacao(self):
         self.key = pygame.key.get_pressed()
 
         self.velocidade.x = 0
@@ -67,7 +67,7 @@ class Skeleton(Enemy):
         self.estado = 0
         self.direcaorandom = 0
 
-    def update(self):
+    def movimentacao(self):
         direcao = pygame.math.Vector2(
             self.player.rect.centerx - self.rect.centerx,
             self.player.rect.centery - self.rect.centery
@@ -114,19 +114,19 @@ class Skeleton(Enemy):
 
         if self.velocidade.x != 0:
             rect_x = new_rect.move(self.velocidade.x, 0)
-            if rect_x.left < 80:
-                rect_x.left = 80
-            if rect_x.right > 1200:
-                rect_x.right = 1200
+            if rect_x.left < 0:
+                rect_x.left = 0
+            if rect_x.right > LARGURA:
+                rect_x.right = LARGURA
             if not rect_x.colliderect(self.objeto.plataforma):
                 new_rect.x = rect_x.x
 
         if self.velocidade.y != 0:
             rect_y = new_rect.move(0, self.velocidade.y)
-            if rect_y.top < 80:
-                rect_y.top = 80
-            if rect_y.bottom > 640:
-                rect_y.bottom = 640
+            if rect_y.top < 0:
+                rect_y.top = 0
+            if rect_y.bottom > ALTURA:
+                rect_y.bottom = ALTURA
             if not rect_y.colliderect(self.objeto.plataforma):
                 new_rect.y = rect_y.y
 
@@ -139,9 +139,65 @@ class Wizard(Enemy):
         aux = pygame.image.load('assets/sprites/wizard.png')
         self.image = pygame.transform.scale(aux, (80, 80))
 
-    def update(self):
-        pass
+        self.estado = "spawnando"
+        self.timer = 0  
+        self.direcao = pygame.math.Vector2(0, 0)
+        self.distancia_percorrida = 0
 
+        self.direcaorandom = 0
+
+    def movimentacao(self):
+        if self.estado == "spawnando":
+            self.velocidade = pygame.math.Vector2(0, 0)
+            self.timer += 1
+            if self.timer >= 120:
+                self.estado = "parado"
+                self.timer = 0
+            return
+        
+        if self.estado == "parado":
+            self.velocidade = pygame.math.Vector2(0, 0)
+            self.timer += 1
+            if self.timer > 60:
+                self.timer = 0
+                self.estado = random.choice(["movendo", "parado"])
+        
+        if self.estado == "movendo":
+            if self.timer == 0:
+                direcoes = [
+                    pygame.math.Vector2(1, 1),
+                    pygame.math.Vector2(1, -1),
+                    pygame.math.Vector2(-1, 1),
+                    pygame.math.Vector2(-1, -1)
+                ]
+                self.direcao = random.choice(direcoes).normalize()
+                self.velocidade = self.direcao * self.speed
+            self.timer += 1
+            if self.timer > 120:  
+                self.timer = 0
+                self.estado = "parado"
+        
+        new_rect = self.rect.copy()
+
+        if self.velocidade.x != 0:
+            rect_x = new_rect.move(self.velocidade.x, 0)
+            if rect_x.left < 0:
+                rect_x.left = 0
+            if rect_x.right > LARGURA:
+                rect_x.right = LARGURA
+            if not rect_x.colliderect(self.objeto.plataforma):
+                new_rect.x = rect_x.x
+
+        if self.velocidade.y != 0:
+            rect_y = new_rect.move(0, self.velocidade.y)
+            if rect_y.top < 0:
+                rect_y.top = 0
+            if rect_y.bottom > ALTURA:
+                rect_y.bottom = ALTURA
+            if not rect_y.colliderect(self.objeto.plataforma):
+                new_rect.y = rect_y.y
+
+        self.rect = new_rect
 class Ghost(Enemy):
     def __init__(self, posicao):
         super().__init__(posicao)
@@ -149,7 +205,7 @@ class Ghost(Enemy):
         aux = pygame.image.load('assets/sprites/ghost.png')
         self.image = pygame.transform.scale(aux, (80, 80))
 
-    def update(self):
+    def movimentacao(self):
         pass
 
 class Object(pygame.sprite.Sprite):
@@ -178,7 +234,10 @@ class Game:
         self.skeleton = Skeleton(self.spawn_pos)
         self.skeleton.player = self.player
         self.skeleton.objeto = self.objeto
-        self.todo_mundo = pygame.sprite.Group([self.player, self.skeleton])
+        self.spawn_wizard_pos = self.spawn_wizard()
+        self.wizard = Wizard(self.spawn_wizard_pos)
+        self.wizard.objeto = self.objeto
+        self.todo_mundo = pygame.sprite.Group([self.player, self.skeleton, self.wizard])
         
     def randomizacao(self):
         self.spawn_pos = ()
@@ -194,11 +253,20 @@ class Game:
 
         self.pos_atual = self.spawn_pos
         
+    def spawn_wizard(self):
+        while True:
+            x = random.randint(80, 1200 - 80)
+            y = random.randint(80, 640 - 80)
+            rect = pygame.Rect(x, y, 80, 80)
+            if not rect.colliderect(self.objeto.plataforma):
+                return (x, y)
+        
     def desenhar(self):
         self.window.fill(PRETO)
         self.window.blit(self.bg, (0, 0))
         
-        self.skeleton.update()
+        self.skeleton.movimentacao()
+        self.wizard.movimentacao()
         self.todo_mundo.update()
 
         mouse_pos = pygame.mouse.get_pos()
