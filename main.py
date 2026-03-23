@@ -323,6 +323,7 @@ class Game:
                 if event.type == pygame.QUIT:
                     self.rodando = False
 
+            self.player.movimentacao()
             self.desenhar()
             self.colisoes()
             self.relogio.tick(FPS)
