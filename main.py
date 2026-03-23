@@ -1,6 +1,5 @@
 import pygame
 import random
-import time
 
 LARGURA = 1280
 ALTURA = 720
@@ -17,6 +16,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = pygame.Rect(posicao, size)
         self.mask = pygame.mask.from_surface(self.image)
         self.velocidade = pygame.math.Vector2(0, 0)
+        self.estado_combate = ['soco', 'espada', 'arco_soco', 'arco_espada']
         
     def movimentacao(self):
         self.key = pygame.key.get_pressed()
@@ -39,7 +39,16 @@ class Player(pygame.sprite.Sprite):
         if self.rect.x > 820: self.rect.x = 820
         if self.rect.y < 160: self.rect.y = 160
         if self.rect.y > 480: self.rect.y = 480
-            
+
+    def soco(self):
+        pass
+
+    def espada(self):
+        pass
+
+    def arco(self):
+        pass
+
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, posicao):
         super().__init__()
@@ -51,6 +60,24 @@ class Enemy(pygame.sprite.Sprite):
         self.pos_inicial = pygame.math.Vector2(posicao)
         self.rect = pygame.Rect(posicao, (80, 80))
         self.velocidade = pygame.math.Vector2(0, 0)
+
+    def random_spawn(self):
+        self.spawn_pos = ()
+        lado = random.randint(1, 4)
+        if lado == 1: #cima
+            self.spawn_pos = (random.randint(80, 1200), -80)
+        if lado == 2: #baixo
+            self.spawn_pos = (random.randint(80, 1200), 660)
+        if lado == 3: #esquerda
+            self.spawn_pos = (-80, random.randint(80, 660))
+        if lado == 4: #direita
+            self.spawn_pos = (1200, random.randint(80, 660))
+
+        self.pos_atual = self.spawn_pos
+        return self.spawn_pos
+
+    def disparo(self):
+        pass
 
 class Skeleton(Enemy):
     def __init__(self, posicao):
@@ -146,6 +173,14 @@ class Wizard(Enemy):
 
         self.direcaorandom = 0
 
+    def spawn_wizard(self):
+        while True:
+            x = random.randint(80, 1200 - 80)
+            y = random.randint(80, 640 - 80)
+            rect = pygame.Rect(x, y, 80, 80)
+            if not rect.colliderect(self.objeto.plataforma):
+                return (x, y)
+
     def movimentacao(self):
         if self.estado == "spawnando":
             self.velocidade = pygame.math.Vector2(0, 0)
@@ -198,6 +233,7 @@ class Wizard(Enemy):
                 new_rect.y = rect_y.y
 
         self.rect = new_rect
+
 class Ghost(Enemy):
     def __init__(self, posicao):
         super().__init__(posicao)
@@ -237,6 +273,15 @@ class Object(pygame.sprite.Sprite):
         super().__init__()
 
         self.plataforma = pygame.Rect(360, 120, 560, 480)
+
+class Gameplay:
+    def __init__(self):
+        '''fazer combate
+        fazer capitalização (matar inimigos dá dinheiro, dinheiro compra objetos)
+        fazer limite de inimigos que aumente com o nível (inicia em 2, sempre 1 ghost garantido)
+        fazer progressão de niveis (nível 1: Velocidade padrão, limite 2. += 1 em ambos para nivel 2) a cada x inimigos mortos, aumenta um nível.
+        fazer score (matar inimigos gera pontos, quantidade aumenta conforme o nível), vidas, dinheiro, flechas'''
+        pass
             
 class Game:
     def __init__(self):
@@ -253,7 +298,7 @@ class Game:
         self.mouse_pos = pygame.Rect((0, 0), (0, 0))
         self.player = Player((LARGURA/2 - 40, ALTURA/2 - 40))
 
-        self.randomizacao()
+        self.random_spawn()
         self.objeto = Object()
         self.skeleton = Skeleton(self.spawn_pos)
         self.skeleton.player = self.player
@@ -261,34 +306,11 @@ class Game:
         self.spawn_wizard_pos = self.spawn_wizard()
         self.wizard = Wizard(self.spawn_wizard_pos)
         self.wizard.objeto = self.objeto
-        self.spawn_ghost_pos = self.randomizacao()
+        self.spawn_ghost_pos = self.random_spawn()
         self.ghost = Ghost(self.spawn_ghost_pos)
         self.ghost.player = self.player
         self.ghost.objeto = self.objeto
         self.todo_mundo = pygame.sprite.Group([self.player, self.skeleton, self.wizard, self.ghost])
-        
-    def randomizacao(self):
-        self.spawn_pos = ()
-        lado = random.randint(1, 4)
-        if lado == 1: #cima
-            self.spawn_pos = (random.randint(80, 1200), -80)
-        if lado == 2: #baixo
-            self.spawn_pos = (random.randint(80, 1200), 660)
-        if lado == 3: #esquerda
-            self.spawn_pos = (-80, random.randint(80, 660))
-        if lado == 4: #direita
-            self.spawn_pos = (1200, random.randint(80, 660))
-
-        self.pos_atual = self.spawn_pos
-        return self.spawn_pos
-        
-    def spawn_wizard(self):
-        while True:
-            x = random.randint(80, 1200 - 80)
-            y = random.randint(80, 640 - 80)
-            rect = pygame.Rect(x, y, 80, 80)
-            if not rect.colliderect(self.objeto.plataforma):
-                return (x, y)
         
     def desenhar(self):
         self.window.fill(PRETO)
@@ -307,7 +329,7 @@ class Game:
         self.todo_mundo.draw(self.window)
         pygame.display.update()
         
-    def colisoes(self):  
+    def colisoes(self): #testador de colisões
         global MOUSE_COLOR
         if self.mouse_pos.colliderect(self.skeleton.rect):
             MOUSE_COLOR = (0, 255, 0)
