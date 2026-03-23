@@ -271,8 +271,21 @@ class Ghost(Enemy):
 class Object(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
+        size = (80,80)
+        auxbau = pygame.image.load('assets/sprites/bau.png')
+        self.bau = pygame.transform.scale(auxbau, size)
+        auxkitmedico = pygame.image.load('assets/sprites/kitmedico.png')
+        self.kitmedico = pygame.transform.scale(auxkitmedico, size)
+        auxarco = pygame.image.load('assets/sprites/arco.png')
+        self.arco = pygame.transform.scale(auxarco, size)
+        auxespada = pygame.image.load('assets/sprites/espada.png')
+        self.espada = pygame.transform.scale(auxespada, size)
 
         self.plataforma = pygame.Rect(360, 120, 560, 480)
+        self.colisao_bau = pygame.Rect(400, 160, 80, 80)
+        self.colisao_kitmedico = pygame.Rect(800, 160, 80, 80)
+        self.colisao_arco = pygame.Rect(400, 480, 80, 80)
+        self.colisao_espada = pygame.Rect(800, 480, 80, 80)
 
 class Gameplay:
     def __init__(self):
@@ -322,7 +335,11 @@ class Game:
     def desenhar(self):
         self.window.fill(PRETO)
         self.window.blit(self.bg, (0, 0))
-        
+        self.window.blit(self.objeto.bau, (400, 160))
+        self.window.blit(self.objeto.kitmedico, (800, 160))
+        self.window.blit(self.objeto.arco, (400, 480))   
+        self.window.blit(self.objeto.espada, (800, 480))        
+
         self.skeleton.movimentacao()
         self.wizard.movimentacao()
         self.ghost.movimentacao()
@@ -344,6 +361,15 @@ class Game:
             MOUSE_COLOR = (125, 0, 0)
         else:
             MOUSE_COLOR = (255, 255, 255)
+            
+        if self.mouse_pos.colliderect(self.objeto.colisao_bau):
+            MOUSE_COLOR = (0, 0, 255)
+        if self.mouse_pos.colliderect(self.objeto.colisao_kitmedico):
+            MOUSE_COLOR = (0, 0, 255)
+        if self.mouse_pos.colliderect(self.objeto.colisao_arco):
+            MOUSE_COLOR = (0, 0, 255)
+        if self.mouse_pos.colliderect(self.objeto.colisao_espada):
+            MOUSE_COLOR = (0, 0, 255)
 
     def executar(self):
         while self.rodando:
