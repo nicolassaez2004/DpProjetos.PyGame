@@ -298,18 +298,25 @@ class Game:
         self.mouse_pos = pygame.Rect((0, 0), (0, 0))
         self.player = Player((LARGURA/2 - 40, ALTURA/2 - 40))
 
-        self.random_spawn()
         self.objeto = Object()
-        self.skeleton = Skeleton(self.spawn_pos)
+
+        self.skeleton = Skeleton((0, 0))
+        spawn_pos = self.skeleton.random_spawn()
+        self.skeleton.rect.topleft = spawn_pos
         self.skeleton.player = self.player
         self.skeleton.objeto = self.objeto
-        self.spawn_wizard_pos = self.spawn_wizard()
-        self.wizard = Wizard(self.spawn_wizard_pos)
+
+        self.wizard = Wizard((0, 0))
         self.wizard.objeto = self.objeto
-        self.spawn_ghost_pos = self.random_spawn()
-        self.ghost = Ghost(self.spawn_ghost_pos)
+        spawn_wizard_pos = self.wizard.spawn_wizard()
+        self.wizard.rect.topleft = spawn_wizard_pos
+
+        self.ghost = Ghost((0, 0))
         self.ghost.player = self.player
         self.ghost.objeto = self.objeto
+        spawn_ghost_pos = self.ghost.random_spawn()
+        self.ghost.rect.topleft = spawn_ghost_pos
+
         self.todo_mundo = pygame.sprite.Group([self.player, self.skeleton, self.wizard, self.ghost])
         
     def desenhar(self):
