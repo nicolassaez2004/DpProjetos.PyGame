@@ -1,7 +1,6 @@
 Lista de tarefas:
 
 Player:
-fazer soco
 fazer espadada
 fazer atirar com arco
 

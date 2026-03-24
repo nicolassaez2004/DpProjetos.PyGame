@@ -17,10 +17,19 @@ class Player(pygame.sprite.Sprite):
         self.estado_movimento = aux_movimento[0]
         
         aux = pygame.image.load('assets/sprites/knight.png')
-        self.image = pygame.transform.scale(aux, size)
+        self.knight_parado = pygame.transform.scale(aux, size)
+        self.knight_parado_flip = pygame.transform.flip(self.knight_parado, True, False)
+        self.knight_soco = pygame.transform.scale(pygame.image.load('assets/sprites/knight_soco.png'), size)
+        self.knight_soco_flip = pygame.transform.flip(self.knight_soco, True, False)
+        self.olhando_direita = True
+        self.image = self.knight_parado
         self.rect = pygame.Rect(posicao, size)
         self.mask = pygame.mask.from_surface(self.image)
         self.velocidade = pygame.math.Vector2(0, 0)
+        self.soco_vento = None
+        self.soco_vento_image = pygame.transform.scale(pygame.image.load('assets/sprites/soco_vento.png'), (80, 80))
+        self.soco_vento_image_rotated = self.soco_vento_image
+        self.soco_vento_image_rotated = self.soco_vento_image
         
     def movimentacao(self):
         self.key = pygame.key.get_pressed()
@@ -45,7 +54,28 @@ class Player(pygame.sprite.Sprite):
         if self.rect.y > 480: self.rect.y = 480
 
     def soco(self):
-        pass
+        mouse_pos = pygame.mouse.get_pos()
+        self.olhando_direita = (mouse_pos[0] >= self.rect.centerx)
+
+        if pygame.mouse.get_pressed()[0] and self.estado_combate == 'soco':
+            self.image = self.knight_soco if self.olhando_direita else self.knight_soco_flip
+            self.mask = pygame.mask.from_surface(self.image)
+            direction = pygame.math.Vector2(mouse_pos[0] - self.rect.centerx, mouse_pos[1] - self.rect.centery)
+            if direction.length() > 0:
+                direction = direction.normalize()
+            else:
+                direction = pygame.math.Vector2(1, 0)
+
+            wind_distance = 80
+            wind_pos = pygame.math.Vector2(self.rect.center) + direction * wind_distance
+
+            angulo = -pygame.math.Vector2(1, 0).angle_to(direction)
+            self.soco_vento_image_rotated = pygame.transform.rotate(self.soco_vento_image, angulo)
+            self.soco_vento = self.soco_vento_image_rotated.get_rect(center=wind_pos)
+        else:
+            self.image = self.knight_parado if self.olhando_direita else self.knight_parado_flip
+            self.mask = pygame.mask.from_surface(self.image)
+            self.soco_vento = None
 
     def espada(self):
         pass
@@ -88,7 +118,9 @@ class Skeleton(Enemy):
         super().__init__(posicao)
 
         aux = pygame.image.load('assets/sprites/skeleton.png')
-        self.image = pygame.transform.scale(aux, (80, 80))
+        self.skeleton = pygame.transform.scale(aux, (80, 80))
+        self.skeleton_inverso = pygame.transform.flip(self.skeleton, True, False)
+        self.image = self.skeleton
 
         self.estado = "indo_player"
         self.timer = 0  
@@ -117,6 +149,7 @@ class Skeleton(Enemy):
             rect_y = new_rect.move(0, self.velocidade.y)
             if not rect_y.colliderect(self.objeto.plataforma):
                 new_rect.y = rect_y.y
+            self.image = self.skeleton if self.player.rect.centerx >= self.rect.centerx else self.skeleton_inverso
             self.rect = new_rect
             return
 
@@ -161,6 +194,7 @@ class Skeleton(Enemy):
             if not rect_y.colliderect(self.objeto.plataforma):
                 new_rect.y = rect_y.y
 
+        self.image = self.skeleton if self.player.rect.centerx >= self.rect.centerx else self.skeleton_inverso
         self.rect = new_rect
 
 class Wizard(Enemy):
@@ -168,7 +202,9 @@ class Wizard(Enemy):
         super().__init__(posicao)
 
         aux = pygame.image.load('assets/sprites/wizard.png')
-        self.image = pygame.transform.scale(aux, (80, 80))
+        self.wizard = pygame.transform.scale(aux, (80, 80))
+        self.wizard_flip = pygame.transform.flip(self.wizard, True, False)
+        self.image = self.wizard
 
         self.estado = "spawnando"
         self.timer = 0  
@@ -236,6 +272,7 @@ class Wizard(Enemy):
             if not rect_y.colliderect(self.objeto.plataforma):
                 new_rect.y = rect_y.y
 
+        self.image = self.wizard if self.player.rect.centerx >= self.rect.centerx else self.wizard_flip
         self.rect = new_rect
 
 class Ghost(Enemy):
@@ -243,9 +280,11 @@ class Ghost(Enemy):
         super().__init__(posicao)
 
         aux = pygame.image.load('assets/sprites/ghost.png')
-        self.image = pygame.transform.scale(aux, (80, 80))
+        self.ghost = pygame.transform.scale(aux, (80, 80))
+        self.ghost_flip = pygame.transform.flip(self.ghost, True, False)
+        self.image = self.ghost
 
-        self.timer = 0  
+        self.timer = 0
         self.direcao = pygame.math.Vector2(0, 0)
         self.distancia_percorrida = 0
 
@@ -262,6 +301,8 @@ class Ghost(Enemy):
             
         self.velocidade = direcao * self.speed
         self.rect.move_ip(*self.velocidade)
+
+        self.image = self.ghost if self.player.rect.centerx >= self.rect.centerx else self.ghost_flip
 
         if self.rect.left < 0:
             self.rect.left = 0
@@ -324,6 +365,7 @@ class Game:
         self.skeleton.objeto = self.objeto
 
         self.wizard = Wizard((0, 0))
+        self.wizard.player = self.player
         self.wizard.objeto = self.objeto
         spawn_wizard_pos = self.wizard.spawn_wizard()
         self.wizard.rect.topleft = spawn_wizard_pos
@@ -344,9 +386,13 @@ class Game:
         self.window.blit(self.objeto.arco, (400, 480))   
         self.window.blit(self.objeto.espada, (800, 480))        
 
-        self.skeleton.movimentacao()
-        self.wizard.movimentacao()
-        self.ghost.movimentacao()
+        if self.skeleton.alive() and self.skeleton.health > 0:
+            self.skeleton.movimentacao()
+        if self.wizard.alive() and self.wizard.health > 0:
+            self.wizard.movimentacao()
+        if self.ghost.alive() and self.ghost.health > 0:
+            self.ghost.movimentacao()
+
         self.todo_mundo.update()
 
         mouse_pos = pygame.mouse.get_pos()
@@ -355,6 +401,8 @@ class Game:
         pygame.draw.rect(self.window, (MOUSE_COLOR), self.mouse_pos)
         
         self.todo_mundo.draw(self.window)
+        if self.player.soco_vento:
+            self.window.blit(self.player.soco_vento_image_rotated, self.player.soco_vento)
         pygame.display.update()
         
     def colisoes(self): #testador de colisões
@@ -375,6 +423,20 @@ class Game:
         if self.mouse_pos.colliderect(self.objeto.colisao_espada):
             MOUSE_COLOR = (0, 0, 255)
 
+        if self.player.soco_vento:
+            if self.player.soco_vento.colliderect(self.skeleton.rect) and self.skeleton.health > 0:
+                self.skeleton.health -= 5
+                if self.skeleton.health <= 0:
+                    self.skeleton.kill()
+            if self.player.soco_vento.colliderect(self.wizard.rect) and self.wizard.health > 0:
+                self.wizard.health -= 5
+                if self.wizard.health <= 0:
+                    self.wizard.kill()
+            if self.player.soco_vento.colliderect(self.ghost.rect) and self.ghost.health > 0:
+                self.ghost.health -= 5
+                if self.ghost.health <= 0:
+                    self.ghost.kill()
+
     def executar(self):
         while self.rodando:
 
@@ -383,6 +445,7 @@ class Game:
                     self.rodando = False
 
             self.player.movimentacao()
+            self.player.soco()
             self.desenhar()
             self.colisoes()
             self.relogio.tick(FPS)
