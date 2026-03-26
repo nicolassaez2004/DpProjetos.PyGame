@@ -31,6 +31,10 @@ class Player(pygame.sprite.Sprite):
         self.soco_vento_image_rotated = self.soco_vento_image
         self.soco_vento_image_rotated = self.soco_vento_image
         
+        self.dinheiro = 0
+        self.vida = 10
+        self.flechas = 0
+        
     def movimentacao(self):
         self.key = pygame.key.get_pressed()
 
@@ -332,15 +336,23 @@ class Object(pygame.sprite.Sprite):
         self.colisao_arco = pygame.Rect(400, 480, 80, 80)
         self.colisao_espada = pygame.Rect(800, 480, 80, 80)
 
-class Gameplay:
-    def __init__(self):
-        '''fazer combate
-        fazer capitalização (matar inimigos dá dinheiro, dinheiro compra objetos)
-        fazer limite de inimigos que aumente com o nível (inicia em 2, sempre 1 ghost garantido)
-        fazer progressão de niveis (nível 1: Velocidade padrão, limite 2. += 1 em ambos para nivel 2) a cada x inimigos mortos, aumenta um nível.
-        fazer score (matar inimigos gera pontos, quantidade aumenta conforme o nível), vidas, dinheiro, flechas'''
-        pass
-            
+class Gameplay(Player):
+    def __init__(self, posicao):
+        super().__init__(posicao)
+        self.nivel = 1
+        self.score = 0
+
+    def capitalizacao(self, inimigo):
+        if isinstance(inimigo, Ghost):
+            self.dinheiro += 2
+            self.score += 20
+        elif isinstance(inimigo, Skeleton):
+            self.dinheiro += 3
+            self.score += 30
+        elif isinstance(inimigo, Wizard):
+            self.dinheiro += 5
+            self.score += 50
+
 class Game:
     def __init__(self):
         self.rodando = True
@@ -353,8 +365,11 @@ class Game:
 
         self.relogio = pygame.time.Clock()
 
+        self.font_score = pygame.font.SysFont(None, 64)
+        self.font_money = pygame.font.SysFont(None, 56)
+
         self.mouse_pos = pygame.Rect((0, 0), (0, 0))
-        self.player = Player((LARGURA/2 - 40, ALTURA/2 - 40))
+        self.player = Gameplay((LARGURA/2 - 40, ALTURA/2 - 40))
 
         self.objeto = Object()
 
@@ -395,6 +410,15 @@ class Game:
 
         self.todo_mundo.update()
 
+        score_text = self.font_score.render(f'SCORE: {self.player.score}', True, (255, 255, 255))
+        money_text = self.font_money.render(f'${self.player.dinheiro}', True, (255, 215, 0))
+
+        score_rect = score_text.get_rect(center=(LARGURA // 2, 40))
+        money_rect = money_text.get_rect(center=(LARGURA // 2, 90))
+
+        self.window.blit(score_text, score_rect)
+        self.window.blit(money_text, money_rect)
+
         mouse_pos = pygame.mouse.get_pos()
         tamanho_mouse = 10
         self.mouse_pos = pygame.Rect(mouse_pos[0], mouse_pos[1], tamanho_mouse, tamanho_mouse)
@@ -428,14 +452,17 @@ class Game:
                 self.skeleton.health -= 5
                 if self.skeleton.health <= 0:
                     self.skeleton.kill()
+                    self.player.capitalizacao(self.skeleton)
             if self.player.soco_vento.colliderect(self.wizard.rect) and self.wizard.health > 0:
                 self.wizard.health -= 5
                 if self.wizard.health <= 0:
                     self.wizard.kill()
+                    self.player.capitalizacao(self.wizard)
             if self.player.soco_vento.colliderect(self.ghost.rect) and self.ghost.health > 0:
                 self.ghost.health -= 5
                 if self.ghost.health <= 0:
                     self.ghost.kill()
+                    self.player.capitalizacao(self.ghost)
 
     def executar(self):
         while self.rodando:
