@@ -21,6 +21,12 @@ class Player(pygame.sprite.Sprite):
         self.knight_parado_flip = pygame.transform.flip(self.knight_parado, True, False)
         self.knight_soco = pygame.transform.scale(pygame.image.load('assets/sprites/knight_soco.png'), size)
         self.knight_soco_flip = pygame.transform.flip(self.knight_soco, True, False)
+        self.knight_espada = pygame.transform.scale(pygame.image.load('assets/sprites/knight_espada.png'), size)
+        self.knight_espada_flip = pygame.transform.flip(self.knight_espada, True, False)
+        self.knight_arco_soco = pygame.transform.scale(pygame.image.load('assets/sprites/knight_arco.png'), size)
+        self.knight_arco_soco_flip = pygame.transform.flip(self.knight_arco_soco, True, False)
+        self.knight_arco_espada = pygame.transform.scale(pygame.image.load('assets/sprites/knight_arco_espada.png'), size)
+        self.knight_arco_espada_flip = pygame.transform.flip(self.knight_arco_espada, True, False)
         self.olhando_direita = True
         self.image = self.knight_parado
         self.rect = pygame.Rect(posicao, size)
@@ -77,7 +83,14 @@ class Player(pygame.sprite.Sprite):
             self.soco_vento_image_rotated = pygame.transform.rotate(self.soco_vento_image, angulo)
             self.soco_vento = self.soco_vento_image_rotated.get_rect(center=wind_pos)
         else:
-            self.image = self.knight_parado if self.olhando_direita else self.knight_parado_flip
+            if self.estado_combate == 'soco':
+                self.image = self.knight_parado if self.olhando_direita else self.knight_parado_flip
+            elif self.estado_combate == 'espada':
+                self.image = self.knight_espada if self.olhando_direita else self.knight_espada_flip
+            elif self.estado_combate == 'arco_soco':
+                self.image = self.knight_arco_soco if self.olhando_direita else self.knight_arco_soco_flip
+            elif self.estado_combate == 'arco_espada':
+                self.image = self.knight_arco_espada if self.olhando_direita else self.knight_arco_espada_flip
             self.mask = pygame.mask.from_surface(self.image)
             self.soco_vento = None
 
@@ -393,6 +406,10 @@ class Game:
 
         self.todo_mundo = pygame.sprite.Group([self.player, self.skeleton, self.wizard, self.ghost])
         
+        self.pode_comprar_espada = False
+        self.pode_interagir_bau = False
+        self.pode_interagir_kit = False
+        self.pode_interagir_arco = False
     def desenhar(self):
         self.window.fill(PRETO)
         self.window.blit(self.bg, (0, 0))
@@ -418,6 +435,31 @@ class Game:
 
         self.window.blit(score_text, score_rect)
         self.window.blit(money_text, money_rect)
+
+        if self.pode_comprar_espada:
+            buy_text = self.font_money.render("aperte E para comprar espada (1$)", True, (255, 255, 255))
+            buy_rect = buy_text.get_rect(center=(LARGURA // 2, ALTURA // 2))
+            self.window.blit(buy_text, buy_rect)
+        elif self.pode_interagir_bau:
+            if self.player.estado_combate in ['arco_soco', 'arco_espada']:
+                flechas_text = self.font_money.render("aperte E para comprar flechas (1$)", True, (255, 255, 255))
+                flechas_rect = flechas_text.get_rect(center=(LARGURA // 2, ALTURA // 2))
+                self.window.blit(flechas_text, flechas_rect)
+            else:
+                msg_text = self.font_money.render("você precisa de um arco.", True, (255, 255, 255))
+                msg_rect = msg_text.get_rect(center=(LARGURA // 2, ALTURA // 2))
+                self.window.blit(msg_text, msg_rect)
+        elif self.pode_interagir_kit:
+            if self.player.vida < 10:
+                kit_text = self.font_money.render("aperte E para usar kitmedico (1$)", True, (255, 255, 255))
+            else:
+                kit_text = self.font_money.render("vida cheia!", True, (255, 255, 255))
+            kit_rect = kit_text.get_rect(center=(LARGURA // 2, ALTURA // 2))
+            self.window.blit(kit_text, kit_rect)
+        elif self.pode_interagir_arco:
+            arco_text = self.font_money.render("aperte E para comprar arco (1$)", True, (255, 255, 255))
+            arco_rect = arco_text.get_rect(center=(LARGURA // 2, ALTURA // 2))
+            self.window.blit(arco_text, arco_rect)
 
         mouse_pos = pygame.mouse.get_pos()
         tamanho_mouse = 10
@@ -447,6 +489,26 @@ class Game:
         if self.mouse_pos.colliderect(self.objeto.colisao_espada):
             MOUSE_COLOR = (0, 0, 255)
 
+        if self.player.rect.colliderect(self.objeto.colisao_espada):
+            self.pode_comprar_espada = True
+        else:
+            self.pode_comprar_espada = False
+
+        if self.player.rect.colliderect(self.objeto.colisao_bau):
+            self.pode_interagir_bau = True
+        else:
+            self.pode_interagir_bau = False
+
+        if self.player.rect.colliderect(self.objeto.colisao_kitmedico):
+            self.pode_interagir_kit = True
+        else:
+            self.pode_interagir_kit = False
+
+        if self.player.rect.colliderect(self.objeto.colisao_arco):
+            self.pode_interagir_arco = True
+        else:
+            self.pode_interagir_arco = False
+
         if self.player.soco_vento:
             if self.player.soco_vento.colliderect(self.skeleton.rect) and self.skeleton.health > 0:
                 self.skeleton.health -= 5
@@ -470,6 +532,23 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.rodando = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_e and self.pode_comprar_espada and self.player.dinheiro >= 1:
+                        self.player.dinheiro -= 1
+                        self.player.estado_combate = 'espada'
+                        self.pode_comprar_espada = False
+                    elif event.key == pygame.K_e and self.pode_interagir_arco and self.player.dinheiro >= 1:
+                        self.player.dinheiro -= 1
+                        self.player.estado_combate = 'arco_soco'
+                        self.pode_interagir_arco = False
+                    elif event.key == pygame.K_e and self.pode_interagir_bau and self.player.dinheiro >= 1:
+                        self.player.dinheiro -= 1
+                        self.player.flechas = min(self.player.flechas + 5, 30)
+                        self.pode_interagir_bau = False
+                    elif event.key == pygame.K_e and self.pode_interagir_kit and self.player.vida < 10 and self.player.dinheiro >= 1:
+                        self.player.dinheiro -= 1
+                        self.player.vida = min(self.player.vida + 1, 10)
+                        self.pode_interagir_kit = False
 
             self.player.movimentacao()
             self.player.soco()
