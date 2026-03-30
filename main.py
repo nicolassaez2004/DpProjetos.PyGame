@@ -429,12 +429,15 @@ class Game:
 
         score_text = self.font_score.render(f'SCORE: {self.player.score}', True, (255, 255, 255))
         money_text = self.font_money.render(f'${self.player.dinheiro}', True, (255, 215, 0))
-
+        vidas_text = self.font_score.render(f'VIDAS: {self.player.vida}', True, (0, 255, 0))
+        
+        vidas_rect = vidas_text.get_rect(center=(200, 70))
         score_rect = score_text.get_rect(center=(LARGURA // 2, 40))
         money_rect = money_text.get_rect(center=(LARGURA // 2, 90))
 
         self.window.blit(score_text, score_rect)
         self.window.blit(money_text, money_rect)
+        self.window.blit(vidas_text, vidas_rect)
 
         if self.pode_comprar_espada:
             buy_text = self.font_money.render("aperte E para comprar espada (1$)", True, (255, 255, 255))
@@ -508,6 +511,9 @@ class Game:
             self.pode_interagir_arco = True
         else:
             self.pode_interagir_arco = False
+        
+        if self.ghost.rect.colliderect(self.player.rect):
+            self.player.vida -= 1
 
         if self.player.soco_vento:
             if self.player.soco_vento.colliderect(self.skeleton.rect) and self.skeleton.health > 0:
