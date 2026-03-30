@@ -1,6 +1,6 @@
 import pygame
 import random
-from Enemies.Enemy import Enemy
+from enemies.enemy import Enemy
 from config.parametros import LARGURA, ALTURA, ASSETS
 
 
