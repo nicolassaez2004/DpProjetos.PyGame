@@ -1,4 +1,5 @@
 import pygame
+import random
 
 from enemies.ghost import Ghost
 from enemies.skeleton import Skeleton
@@ -30,30 +31,40 @@ class Game(Colisoes):
 
         self.objeto = Object()
 
-        self.skeleton = Skeleton((0, 0))
-        spawn_pos = self.skeleton.random_spawn()
-        self.skeleton.rect.topleft = spawn_pos
-        self.skeleton.player = self.player
-        self.skeleton.objeto = self.objeto
+        self.todo_mundo = pygame.sprite.Group([self.player])
+        self.inimigos = pygame.sprite.Group()
+        self.tipos_inimigos = [Skeleton, Wizard, Ghost]
+        self.spawn_cooldown_ms = 900
+        self.ultimo_spawn_ms = pygame.time.get_ticks()
 
-        self.wizard = Wizard((0, 0))
-        self.wizard.player = self.player
-        self.wizard.objeto = self.objeto
-        spawn_wizard_pos = self.wizard.spawn_wizard()
-        self.wizard.rect.topleft = spawn_wizard_pos
-
-        self.ghost = Ghost((0, 0))
-        self.ghost.player = self.player
-        self.ghost.objeto = self.objeto
-        spawn_ghost_pos = self.ghost.random_spawn()
-        self.ghost.rect.topleft = spawn_ghost_pos
-
-        self.todo_mundo = pygame.sprite.Group([self.player, self.skeleton, self.wizard, self.ghost])
+        for _ in range(self.player.limite_inimigos):
+            self.spawn_inimigo()
         
         self.pode_comprar_espada = False
         self.pode_interagir_bau = False
         self.pode_interagir_kit = False
         self.pode_interagir_arco = False
+
+    def spawn_inimigo(self):
+        tipo_inimigo = random.choice(self.tipos_inimigos)
+        inimigo = tipo_inimigo((0, 0))
+        inimigo.player = self.player
+        inimigo.objeto = self.objeto
+
+        if isinstance(inimigo, Wizard):
+            pos_spawn = inimigo.spawn_wizard()
+        else:
+            pos_spawn = inimigo.random_spawn()
+
+        inimigo.rect.topleft = pos_spawn
+        self.player.aplicar_scaling_inimigo(inimigo)
+        self.inimigos.add(inimigo)
+
+    def atualizar_spawn_inimigos(self):
+        agora = pygame.time.get_ticks()
+        if len(self.inimigos) < self.player.limite_inimigos and (agora - self.ultimo_spawn_ms) >= self.spawn_cooldown_ms:
+            self.spawn_inimigo()
+            self.ultimo_spawn_ms = agora
 
     def desenhar(self):
         self.window.fill(PRETO)
@@ -63,14 +74,9 @@ class Game(Colisoes):
         self.window.blit(self.objeto.arco, (400, 480))   
         self.window.blit(self.objeto.espada, (800, 480))        
 
-        if self.skeleton.alive() and self.skeleton.health > 0:
-            self.skeleton.movimentacao()
-        if self.wizard.alive() and self.wizard.health > 0:
-            self.wizard.movimentacao()
-        if self.ghost.alive() and self.ghost.health > 0:
-            self.ghost.movimentacao()
-
-        self.todo_mundo.update()
+        for inimigo in self.inimigos:
+            if inimigo.alive() and inimigo.health > 0:
+                inimigo.movimentacao()
 
         score_text = self.font_score.render(f'SCORE: {self.player.score}', True, (255, 255, 255))
         money_text = self.font_money.render(f'${self.player.dinheiro}', True, (255, 215, 0))
@@ -112,6 +118,7 @@ class Game(Colisoes):
         pygame.draw.rect(self.window, parametros.MOUSE_COLOR, self.mouse_pos)
         
         self.todo_mundo.draw(self.window)
+        self.inimigos.draw(self.window)
         if self.player.soco_vento:
             self.window.blit(self.player.soco_vento_image_rotated, self.player.soco_vento)
         if self.player.espada_vento:

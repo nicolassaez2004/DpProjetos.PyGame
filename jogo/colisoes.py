@@ -7,7 +7,7 @@ from config.parametros import FPS
 class Colisoes:
     def colisoes(self): #testador de colisões
         parametros.MOUSE_COLOR = (255, 255, 255)
-        if self.mouse_pos.colliderect(self.skeleton.rect):
+        if any(self.mouse_pos.colliderect(inimigo.rect) for inimigo in self.inimigos):
             parametros.MOUSE_COLOR = (0, 255, 0)
         elif self.mouse_pos.colliderect(self.objeto.plataforma):
             parametros.MOUSE_COLOR = (125, 0, 0)
@@ -42,38 +42,20 @@ class Colisoes:
             self.pode_interagir_arco = False
 
         if self.player.soco_vento:
-            if self.player.soco_vento.colliderect(self.skeleton.rect) and self.skeleton.health > 0:
-                self.skeleton.health -= 5
-                if self.skeleton.health <= 0:
-                    self.skeleton.kill()
-                    self.player.capitalizacao(self.skeleton)
-            if self.player.soco_vento.colliderect(self.wizard.rect) and self.wizard.health > 0:
-                self.wizard.health -= 5
-                if self.wizard.health <= 0:
-                    self.wizard.kill()
-                    self.player.capitalizacao(self.wizard)
-            if self.player.soco_vento.colliderect(self.ghost.rect) and self.ghost.health > 0:
-                self.ghost.health -= 5
-                if self.ghost.health <= 0:
-                    self.ghost.kill()
-                    self.player.capitalizacao(self.ghost)
+            for inimigo in list(self.inimigos):
+                if self.player.soco_vento.colliderect(inimigo.rect) and inimigo.health > 0:
+                    inimigo.health -= 5
+                    if inimigo.health <= 0:
+                        inimigo.kill()
+                        self.player.capitalizacao(inimigo)
 
         if self.player.espada_vento_hitbox:
-            if self.player.espada_vento_hitbox.colliderect(self.skeleton.rect) and self.skeleton.health > 0:
-                self.skeleton.health -= 5
-                if self.skeleton.health <= 0:
-                    self.skeleton.kill()
-                    self.player.capitalizacao(self.skeleton)
-            if self.player.espada_vento_hitbox.colliderect(self.wizard.rect) and self.wizard.health > 0:
-                self.wizard.health -= 5
-                if self.wizard.health <= 0:
-                    self.wizard.kill()
-                    self.player.capitalizacao(self.wizard)
-            if self.player.espada_vento_hitbox.colliderect(self.ghost.rect) and self.ghost.health > 0:
-                self.ghost.health -= 5
-                if self.ghost.health <= 0:
-                    self.ghost.kill()
-                    self.player.capitalizacao(self.ghost)
+            for inimigo in list(self.inimigos):
+                if self.player.espada_vento_hitbox.colliderect(inimigo.rect) and inimigo.health > 0:
+                    inimigo.health -= 5
+                    if inimigo.health <= 0:
+                        inimigo.kill()
+                        self.player.capitalizacao(inimigo)
 
     def executar(self):
         while self.rodando:
@@ -103,6 +85,7 @@ class Colisoes:
             self.player.atacar()
             self.desenhar()
             self.colisoes()
+            self.atualizar_spawn_inimigos()
             self.relogio.tick(FPS)
 
         pygame.quit()
