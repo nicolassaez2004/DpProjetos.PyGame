@@ -1,6 +1,6 @@
 import pygame
 
-from jogador.combate import Combat
+from jogador.guerreiro import Combat
 from config.parametros import ASSETS
 
 
@@ -42,9 +42,16 @@ class Player(Combat, pygame.sprite.Sprite):
         self.espada_vento_hitbox = None
         self.espada_vento_image = pygame.transform.scale(pygame.image.load(ASSETS + 'espada_vento.png'), (160, 160))
         self.espada_vento_image_rotated = self.espada_vento_image
+
+        self.arrow_image = pygame.transform.scale_by(pygame.image.load(ASSETS + 'arrow.png'), 5)
+        self.flechas_disparadas = pygame.sprite.Group()
+        self.cooldown_flecha_ms = 250
+        self.ultimo_disparo_flecha_ms = -self.cooldown_flecha_ms
         
         self.dinheiro = 0
+        self.max_vida = 10
         self.vida = 10
+        self.max_flechas = 30
         self.flechas = 0
         
     def movimentacao(self):
@@ -84,6 +91,8 @@ class Player(Combat, pygame.sprite.Sprite):
             self.estado_combate = 'soco'
 
     def equipar_arco(self):
+        if not self.tem_arco:
+            self.flechas = 5
         self.tem_arco = True
         self.atualizar_estado_combate()
 
