@@ -145,6 +145,11 @@ class Game:
         self.todo_mundo.draw(self.window)
         self.spawn.inimigos.draw(self.window)
         self.player.flechas_disparadas.draw(self.window)
+        for inimigo in self.spawn.inimigos:
+            if isinstance(inimigo, Skeleton):
+                inimigo.flechas_disparadas.draw(self.window)
+            elif isinstance(inimigo, Wizard):
+                inimigo.fireballs_disparadas.draw(self.window)
         if self.player.soco_vento:
             self.window.blit(self.player.soco_vento_image_rotated, self.player.soco_vento)
         if self.player.espada_vento:
@@ -187,6 +192,19 @@ class Game:
         else:
             self.pode_interagir_arco = False
 
+        for inimigo in list(self.spawn.inimigos):
+            if not isinstance(inimigo, Ghost):
+                continue
+
+            if not self.player.rect.colliderect(inimigo.rect):
+                continue
+
+            mascara_inimigo = pygame.mask.from_surface(inimigo.image)
+            offset = (inimigo.rect.x - self.player.rect.x, inimigo.rect.y - self.player.rect.y)
+            if self.player.mask.overlap(mascara_inimigo, offset):
+                inimigo.kill()
+                self.player.vida = max(0, self.player.vida - 1)
+
         if self.player.soco_vento:
             for inimigo in list(self.spawn.inimigos):
                 if self.player.soco_vento.colliderect(inimigo.rect) and inimigo.health > 0:
@@ -205,6 +223,9 @@ class Game:
 
         for flecha in list(self.player.flechas_disparadas):
             for inimigo in list(self.spawn.inimigos):
+                if isinstance(inimigo, Ghost):
+                    continue
+
                 if inimigo.health <= 0 or not flecha.rect.colliderect(inimigo.rect):
                     continue
 
@@ -217,6 +238,32 @@ class Game:
                         inimigo.kill()
                         self.player.capitalizacao(inimigo)
                     break
+
+        for inimigo in self.spawn.inimigos:
+            if not isinstance(inimigo, Skeleton):
+                continue
+
+            for flecha in list(inimigo.flechas_disparadas):
+                if not flecha.rect.colliderect(self.player.rect):
+                    continue
+
+                offset = (self.player.rect.x - flecha.rect.x, self.player.rect.y - flecha.rect.y)
+                if flecha.mask.overlap(self.player.mask, offset):
+                    flecha.kill()
+                    self.player.vida = max(0, self.player.vida - 1)
+
+        for inimigo in self.spawn.inimigos:
+            if not isinstance(inimigo, Wizard):
+                continue
+
+            for fireball in list(inimigo.fireballs_disparadas):
+                if not fireball.rect.colliderect(self.player.rect):
+                    continue
+
+                offset = (self.player.rect.x - fireball.rect.x, self.player.rect.y - fireball.rect.y)
+                if fireball.mask.overlap(self.player.mask, offset):
+                    fireball.kill()
+                    self.player.vida = max(0, self.player.vida - 1)
 
     def executar(self):
         while self.rodando:

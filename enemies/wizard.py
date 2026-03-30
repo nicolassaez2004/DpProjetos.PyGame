@@ -19,6 +19,57 @@ class Wizard(Enemy):
         self.distancia_percorrida = 0
 
         self.direcaorandom = 0
+        self.fireball_image = pygame.transform.scale(pygame.image.load(ASSETS + 'fireball_wizard.png'), (80, 80))
+        self.fireballs_disparadas = pygame.sprite.Group()
+        self.cooldown_disparo_ms = 3600
+        self.ultimo_disparo_ms = pygame.time.get_ticks()
+
+    def _criar_fireball(self, direcao):
+        if direcao.length_squared() == 0:
+            direcao = pygame.math.Vector2(1, 0)
+
+        fireball = pygame.sprite.Sprite()
+        fireball.direcao = direcao.normalize()
+        fireball.velocidade = 2
+        fireball.damage = 1
+        fireball.angulo = 0
+        fireball.rotacao_por_frame = -3
+        fireball.base_image = self.fireball_image
+
+        fireball.image = fireball.base_image
+        fireball.rect = fireball.image.get_rect(center=self.rect.center)
+        fireball.mask = pygame.mask.from_surface(fireball.image)
+        return fireball
+
+    def _atualizar_fireballs(self):
+        for fireball in list(self.fireballs_disparadas):
+            centro_anterior = fireball.rect.center
+            fireball.angulo += fireball.rotacao_por_frame
+            fireball.image = pygame.transform.rotate(fireball.base_image, fireball.angulo)
+            fireball.rect = fireball.image.get_rect(center=centro_anterior)
+            fireball.mask = pygame.mask.from_surface(fireball.image)
+
+            deslocamento = fireball.direcao * fireball.velocidade
+            fireball.rect.move_ip(deslocamento.x, deslocamento.y)
+            if (
+                fireball.rect.right < 0 or fireball.rect.left > LARGURA or
+                fireball.rect.bottom < 0 or fireball.rect.top > ALTURA
+            ):
+                fireball.kill()
+
+    def disparo(self):
+        agora = pygame.time.get_ticks()
+        if (agora - self.ultimo_disparo_ms) < self.cooldown_disparo_ms:
+            return
+
+        direcao = pygame.math.Vector2(
+            self.player.rect.centerx - self.rect.centerx,
+            self.player.rect.centery - self.rect.centery
+        )
+
+        fireball = self._criar_fireball(direcao)
+        self.fireballs_disparadas.add(fireball)
+        self.ultimo_disparo_ms = agora
 
     def spawn_wizard(self):
         while True:
@@ -35,6 +86,7 @@ class Wizard(Enemy):
             if self.timer >= 120:
                 self.estado = "parado"
                 self.timer = 0
+            self._atualizar_fireballs()
             return
         
         if self.estado == "parado":
@@ -81,3 +133,5 @@ class Wizard(Enemy):
 
         self.image = self.wizard if self.player.rect.centerx >= self.rect.centerx else self.wizard_flip
         self.rect = new_rect
+        self.disparo()
+        self._atualizar_fireballs()

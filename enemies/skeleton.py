@@ -21,6 +21,51 @@ class Skeleton(Enemy):
         self.estado = 0
         self.direcaorandom = 0
 
+        self.arrow_skeleton_image = pygame.transform.scale_by(pygame.image.load(ASSETS + 'arrow_skeleton.png'), 5)
+        self.flechas_disparadas = pygame.sprite.Group()
+        self.cooldown_disparo_ms = 1200
+        self.ultimo_disparo_ms = pygame.time.get_ticks()
+
+    def _criar_flecha(self, direcao):
+        if direcao.length_squared() == 0:
+            direcao = pygame.math.Vector2(1, 0)
+
+        flecha = pygame.sprite.Sprite()
+        flecha.direcao = direcao.normalize()
+        flecha.velocidade = 12
+        flecha.damage = 1
+
+        direcao_base_sprite = pygame.math.Vector2(1, -1)
+        angulo = -direcao_base_sprite.angle_to(flecha.direcao)
+        flecha.image = pygame.transform.rotate(self.arrow_skeleton_image, angulo)
+        flecha.rect = flecha.image.get_rect(center=self.rect.center)
+        flecha.mask = pygame.mask.from_surface(flecha.image)
+        return flecha
+
+    def _atualizar_flechas(self):
+        for flecha in list(self.flechas_disparadas):
+            deslocamento = flecha.direcao * flecha.velocidade
+            flecha.rect.move_ip(deslocamento.x, deslocamento.y)
+            if (
+                flecha.rect.right < 0 or flecha.rect.left > LARGURA or
+                flecha.rect.bottom < 0 or flecha.rect.top > ALTURA
+            ):
+                flecha.kill()
+
+    def disparo(self):
+        agora = pygame.time.get_ticks()
+        if (agora - self.ultimo_disparo_ms) < self.cooldown_disparo_ms:
+            return
+
+        direcao = pygame.math.Vector2(
+            self.player.rect.centerx - self.rect.centerx,
+            self.player.rect.centery - self.rect.centery
+        )
+
+        flecha = self._criar_flecha(direcao)
+        self.flechas_disparadas.add(flecha)
+        self.ultimo_disparo_ms = agora
+
     def movimentacao(self):
         direcao = pygame.math.Vector2(
             self.player.rect.centerx - self.rect.centerx,
@@ -87,3 +132,5 @@ class Skeleton(Enemy):
 
         self.image = self.skeleton if self.player.rect.centerx >= self.rect.centerx else self.skeleton_inverso
         self.rect = new_rect
+        self.disparo()
+        self._atualizar_flechas()
