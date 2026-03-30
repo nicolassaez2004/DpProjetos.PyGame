@@ -1,0 +1,6 @@
+LARGURA = 1280
+ALTURA = 720
+PRETO = (0, 0, 0)
+MOUSE_COLOR = (255, 255, 255)
+FPS = 60
+ASSETS = 'assets/sprites/'
