@@ -47,6 +47,13 @@ class Player(Combat, pygame.sprite.Sprite):
         self.flechas_disparadas = pygame.sprite.Group()
         self.cooldown_flecha_ms = 250
         self.ultimo_disparo_flecha_ms = -self.cooldown_flecha_ms
+        self.cooldown_soco_ms = 1000
+        self.ultimo_soco_ms = -self.cooldown_soco_ms
+        self.soco_vento_expira_ms = 0
+        self.cooldown_espada_ms = 1000
+        self.ultimo_espada_ms = -self.cooldown_espada_ms
+        self.espada_vento_expira_ms = 0
+        self.duracao_vento_ms = 300
         
         self.dinheiro = 0
         self.max_vida = 10
@@ -61,13 +68,13 @@ class Player(Combat, pygame.sprite.Sprite):
         self.velocidade.y = 0
 
         if self.key[pygame.K_w]:
-            self.velocidade.y = -10
+            self.velocidade.y = -7
         if self.key[pygame.K_s]:
-            self.velocidade.y = 10
+            self.velocidade.y = 7
         if self.key[pygame.K_a]:
-            self.velocidade.x = -10
+            self.velocidade.x = -7
         if self.key[pygame.K_d]:
-            self.velocidade.x = 10
+            self.velocidade.x = 7
 
         self.rect.move_ip(*self.velocidade)
 

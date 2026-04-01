@@ -37,6 +37,13 @@ class Combat:
                 flecha.kill()
 
     def ataque_soco(self, mouse_pos):
+        agora = pygame.time.get_ticks()
+        if agora - self.ultimo_soco_ms < self.cooldown_soco_ms:
+            if agora >= self.soco_vento_expira_ms:
+                self._sprite_idle()
+            return
+        self.ultimo_soco_ms = agora
+        self.soco_vento_expira_ms = agora + self.duracao_vento_ms
         self.image = self.knight_soco if self.olhando_direita else self.knight_soco_flip
         self.mask = pygame.mask.from_surface(self.image)
         direction = pygame.math.Vector2(mouse_pos[0] - self.rect.centerx, mouse_pos[1] - self.rect.centery)
@@ -55,6 +62,13 @@ class Combat:
         self.espada_vento_hitbox = None
 
     def ataque_espada(self, mouse_pos):
+        agora = pygame.time.get_ticks()
+        if agora - self.ultimo_espada_ms < self.cooldown_espada_ms:
+            if agora >= self.espada_vento_expira_ms:
+                self._sprite_idle()
+            return
+        self.ultimo_espada_ms = agora
+        self.espada_vento_expira_ms = agora + self.duracao_vento_ms
         self.image = self.knight_golpe_espada if self.olhando_direita else self.knight_golpe_espada_flip
         self.mask = pygame.mask.from_surface(self.image)
         direction = pygame.math.Vector2(mouse_pos[0] - self.rect.centerx, mouse_pos[1] - self.rect.centery)
@@ -102,7 +116,11 @@ class Combat:
             else:
                 self.ataque_soco(mouse_pos)
         else:
-            self._sprite_idle()
+            agora = pygame.time.get_ticks()
+            soco_ativo = agora < self.soco_vento_expira_ms
+            espada_ativa = agora < self.espada_vento_expira_ms
+            if not soco_ativo and not espada_ativa:
+                self._sprite_idle()
 
     def ataque_arco(self, mouse_pos):
         self.image = self.knight_arco_espada if self.estado_combate == 'arco_espada' else self.knight_arco_soco

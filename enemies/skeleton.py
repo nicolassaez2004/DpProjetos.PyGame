@@ -23,7 +23,7 @@ class Skeleton(Enemy):
 
         self.arrow_skeleton_image = pygame.transform.scale_by(pygame.image.load(ASSETS + 'arrow_skeleton.png'), 5)
         self.flechas_disparadas = pygame.sprite.Group()
-        self.cooldown_disparo_ms = 1200
+        self.cooldown_disparo_ms = 3000
         self.ultimo_disparo_ms = pygame.time.get_ticks()
 
     def _criar_flecha(self, direcao):
@@ -32,7 +32,7 @@ class Skeleton(Enemy):
 
         flecha = pygame.sprite.Sprite()
         flecha.direcao = direcao.normalize()
-        flecha.velocidade = 12
+        flecha.velocidade = 6
         flecha.damage = 1
 
         direcao_base_sprite = pygame.math.Vector2(1, -1)

@@ -1,6 +1,7 @@
 import random
 import pygame
 from enemies.wizard import Wizard
+from enemies.ghost import Ghost
 
 class Spawn:
     def __init__(self):
@@ -12,7 +13,11 @@ class Spawn:
         self.ultimo_spawn_ms = 0
     
     def spawn_inimigo(self):
-            tipo_inimigo = random.choice(self.tipos_inimigos)
+            tem_ghost = any(isinstance(i, Ghost) for i in self.inimigos)
+            if self.player.nivel == 1 and not tem_ghost:
+                tipo_inimigo = Ghost
+            else:
+                tipo_inimigo = random.choice(self.tipos_inimigos)
             inimigo = tipo_inimigo((0, 0))
             inimigo.player = self.player
             inimigo.objeto = self.objeto

@@ -6,6 +6,7 @@ from config.parametros import LARGURA, ALTURA, ASSETS
 class Ghost(Enemy):
     def __init__(self, posicao):
         super().__init__(posicao)
+        self.health = 20
 
         aux = pygame.image.load(ASSETS + 'ghost.png')
         self.ghost = pygame.transform.scale(aux, (80, 80))

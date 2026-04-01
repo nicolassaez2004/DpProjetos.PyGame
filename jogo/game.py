@@ -51,6 +51,8 @@ class Game:
         self.pode_interagir_bau = False
         self.pode_interagir_kit = False
         self.pode_interagir_arco = False
+        self.flechas_orfas = pygame.sprite.Group()
+        self.fireballs_orfas = pygame.sprite.Group()
 
     def desenhar_barra(self, pos, tamanho, valor_atual, valor_maximo, cor_preenchimento, cor_fundo):
         barra_rect = pygame.Rect(pos, tamanho)
@@ -88,17 +90,35 @@ class Game:
         self.window.blit(score_text, score_rect)
         self.window.blit(money_text, money_rect)
 
-        vida_label = self.font_hud.render('VIDA', True, (255, 255, 255))
-        self.window.blit(vida_label, (24, 70))
-        self.desenhar_barra((105, 77), (200, 34), self.player.vida, self.player.max_vida, (0, 255, 0), (40, 40, 40))
-        vida_text = self.font_hud_valor.render(f'{self.player.vida}/{self.player.max_vida}', True, (255, 255, 255))
-        self.window.blit(vida_text, (315, 79))
+        hud_margem_x = 50
+        barra_largura = 200
+        barra_altura = 34
+        barra_y = 77
 
-        flecha_label = self.font_hud.render('FLECHA', True, (255, 255, 255))
-        self.window.blit(flecha_label, (905, 70))
-        self.desenhar_barra((1025, 77), (200, 34), self.player.flechas, self.player.max_flechas, (255, 60, 60), (40, 40, 40))
+        vida_barra_pos = (hud_margem_x, barra_y)
+        flecha_barra_pos = (LARGURA - hud_margem_x - barra_largura, barra_y)
+
+        self.desenhar_barra(vida_barra_pos, (barra_largura, barra_altura), self.player.vida, self.player.max_vida, (0, 255, 0), (40, 40, 40))
+        self.desenhar_barra(flecha_barra_pos, (barra_largura, barra_altura), self.player.flechas, self.player.max_flechas, (255, 60, 60), (40, 40, 40))
+
+        vida_barra_rect = pygame.Rect(vida_barra_pos, (barra_largura, barra_altura))
+        flecha_barra_rect = pygame.Rect(flecha_barra_pos, (barra_largura, barra_altura))
+
+        vida_label = self.font_hud.render('VIDAS', True, (255, 255, 255))
+        vida_label_rect = vida_label.get_rect(midbottom=(vida_barra_rect.centerx, vida_barra_rect.top - 6))
+        self.window.blit(vida_label, vida_label_rect)
+
+        flecha_label = self.font_hud.render('FLECHAS', True, (255, 255, 255))
+        flecha_label_rect = flecha_label.get_rect(midbottom=(flecha_barra_rect.centerx, flecha_barra_rect.top - 6))
+        self.window.blit(flecha_label, flecha_label_rect)
+
+        vida_text = self.font_hud_valor.render(f'{self.player.vida}/{self.player.max_vida}', True, (255, 255, 255))
+        vida_text_rect = vida_text.get_rect(midleft=(vida_barra_rect.right + 10, vida_barra_rect.centery))
+        self.window.blit(vida_text, vida_text_rect)
+
         flecha_text = self.font_hud_valor.render(f'{self.player.flechas}/{self.player.max_flechas}', True, (255, 255, 255))
-        self.window.blit(flecha_text, (1230, 79))
+        flecha_text_rect = flecha_text.get_rect(midright=(flecha_barra_rect.left - 10, flecha_barra_rect.centery))
+        self.window.blit(flecha_text, flecha_text_rect)
 
         nivel_text_outline = self.font_hud.render(f'Nivel: {self.player.nivel}', True, (10, 35, 90))
         nivel_text = self.font_hud.render(f'Nivel: {self.player.nivel}', True, (95, 210, 255))
@@ -107,11 +127,14 @@ class Game:
         self.window.blit(nivel_text, nivel_rect)
 
         if self.pode_comprar_espada:
-            buy_text = self.font_money.render("aperte E para comprar espada (1$)", True, (255, 255, 255))
+            if self.player.estado_combate in ('espada', 'arco_espada'):
+                buy_text = self.font_money.render("você já comprou uma espada!", True, (255, 255, 255))
+            else:
+                buy_text = self.font_money.render("aperte E para comprar espada (1$)", True, (255, 255, 255))
             buy_rect = buy_text.get_rect(center=(LARGURA // 2, ALTURA // 2))
             self.window.blit(buy_text, buy_rect)
         elif self.pode_interagir_bau:
-            if self.player.tem_arco:
+            if self.player.estado_combate in ('arco_soco', 'arco_espada'):
                 if self.player.flechas >= self.player.max_flechas:
                     flechas_text = self.font_money.render("Você já tem o máximo de flechas possíveis", True, (255, 255, 255))
                 else:
@@ -150,11 +173,26 @@ class Game:
                 inimigo.flechas_disparadas.draw(self.window)
             elif isinstance(inimigo, Wizard):
                 inimigo.fireballs_disparadas.draw(self.window)
+        self.flechas_orfas.draw(self.window)
+        self.fireballs_orfas.draw(self.window)
         if self.player.soco_vento:
             self.window.blit(self.player.soco_vento_image_rotated, self.player.soco_vento)
         if self.player.espada_vento:
             self.window.blit(self.player.espada_vento_image_rotated, self.player.espada_vento)
         pygame.display.update()
+
+    def _matar_inimigo(self, inimigo, com_capitalizacao=True):
+        if isinstance(inimigo, Skeleton):
+            for p in list(inimigo.flechas_disparadas):
+                inimigo.flechas_disparadas.remove(p)
+                self.flechas_orfas.add(p)
+        elif isinstance(inimigo, Wizard):
+            for p in list(inimigo.fireballs_disparadas):
+                inimigo.fireballs_disparadas.remove(p)
+                self.fireballs_orfas.add(p)
+        inimigo.kill()
+        if com_capitalizacao:
+            self.player.capitalizacao(inimigo)
 
     def colisoes(self): #testador de colisões
         parametros.MOUSE_COLOR = (255, 255, 255)
@@ -202,24 +240,43 @@ class Game:
             mascara_inimigo = pygame.mask.from_surface(inimigo.image)
             offset = (inimigo.rect.x - self.player.rect.x, inimigo.rect.y - self.player.rect.y)
             if self.player.mask.overlap(mascara_inimigo, offset):
-                inimigo.kill()
+                self._matar_inimigo(inimigo, com_capitalizacao=False)
                 self.player.vida = max(0, self.player.vida - 1)
 
+        agora_ms = pygame.time.get_ticks()
         if self.player.soco_vento:
             for inimigo in list(self.spawn.inimigos):
-                if self.player.soco_vento.colliderect(inimigo.rect) and inimigo.health > 0:
-                    inimigo.health -= 5
+                pode_ser_atingido = (agora_ms - inimigo.ultimo_hit_ms) >= inimigo.hit_cooldown_ms
+                if self.player.soco_vento.colliderect(inimigo.rect) and inimigo.health > 0 and pode_ser_atingido:
+                    inimigo.ultimo_hit_ms = agora_ms
+                    inimigo.health -= 10
                     if inimigo.health <= 0:
-                        inimigo.kill()
-                        self.player.capitalizacao(inimigo)
+                        self._matar_inimigo(inimigo)
 
         if self.player.espada_vento_hitbox:
             for inimigo in list(self.spawn.inimigos):
-                if self.player.espada_vento_hitbox.colliderect(inimigo.rect) and inimigo.health > 0:
-                    inimigo.health -= 5
+                pode_ser_atingido = (agora_ms - inimigo.ultimo_hit_ms) >= inimigo.hit_cooldown_ms
+                if self.player.espada_vento_hitbox.colliderect(inimigo.rect) and inimigo.health > 0 and pode_ser_atingido:
+                    inimigo.ultimo_hit_ms = agora_ms
+                    inimigo.health -= 20
                     if inimigo.health <= 0:
-                        inimigo.kill()
-                        self.player.capitalizacao(inimigo)
+                        self._matar_inimigo(inimigo)
+
+            for inimigo in self.spawn.inimigos:
+                if isinstance(inimigo, Skeleton):
+                    for flecha in list(inimigo.flechas_disparadas):
+                        if self.player.espada_vento_hitbox.colliderect(flecha.rect):
+                            flecha.kill()
+                if isinstance(inimigo, Wizard):
+                    for fireball in list(inimigo.fireballs_disparadas):
+                        if self.player.espada_vento_hitbox.colliderect(fireball.rect):
+                            fireball.kill()
+            for flecha in list(self.flechas_orfas):
+                if self.player.espada_vento_hitbox.colliderect(flecha.rect):
+                    flecha.kill()
+            for fireball in list(self.fireballs_orfas):
+                if self.player.espada_vento_hitbox.colliderect(fireball.rect):
+                    fireball.kill()
 
         for flecha in list(self.player.flechas_disparadas):
             for inimigo in list(self.spawn.inimigos):
@@ -235,8 +292,7 @@ class Game:
                     inimigo.health -= flecha.damage
                     flecha.kill()
                     if inimigo.health <= 0:
-                        inimigo.kill()
-                        self.player.capitalizacao(inimigo)
+                        self._matar_inimigo(inimigo)
                     break
 
         for inimigo in self.spawn.inimigos:
@@ -265,6 +321,37 @@ class Game:
                     fireball.kill()
                     self.player.vida = max(0, self.player.vida - 1)
 
+        for flecha in list(self.flechas_orfas):
+            deslocamento = flecha.direcao * flecha.velocidade
+            flecha.rect.move_ip(deslocamento.x, deslocamento.y)
+            if (flecha.rect.right < -80 or flecha.rect.left > LARGURA + 80 or
+                    flecha.rect.bottom < -80 or flecha.rect.top > ALTURA + 80):
+                flecha.kill()
+                continue
+            if flecha.rect.colliderect(self.player.rect):
+                offset = (self.player.rect.x - flecha.rect.x, self.player.rect.y - flecha.rect.y)
+                if flecha.mask.overlap(self.player.mask, offset):
+                    flecha.kill()
+                    self.player.vida = max(0, self.player.vida - 1)
+
+        for fireball in list(self.fireballs_orfas):
+            centro_anterior = fireball.rect.center
+            fireball.angulo += fireball.rotacao_por_frame
+            fireball.image = pygame.transform.rotate(fireball.base_image, fireball.angulo)
+            fireball.rect = fireball.image.get_rect(center=centro_anterior)
+            fireball.mask = pygame.mask.from_surface(fireball.image)
+            deslocamento = fireball.direcao * fireball.velocidade
+            fireball.rect.move_ip(deslocamento.x, deslocamento.y)
+            if (fireball.rect.right < -80 or fireball.rect.left > LARGURA + 80 or
+                    fireball.rect.bottom < -80 or fireball.rect.top > ALTURA + 80):
+                fireball.kill()
+                continue
+            if fireball.rect.colliderect(self.player.rect):
+                offset = (self.player.rect.x - fireball.rect.x, self.player.rect.y - fireball.rect.y)
+                if fireball.mask.overlap(self.player.mask, offset):
+                    fireball.kill()
+                    self.player.vida = max(0, self.player.vida - 1)
+
     def executar(self):
         while self.rodando:
 
@@ -280,7 +367,7 @@ class Game:
                         self.player.dinheiro -= 1
                         self.player.equipar_arco()
                         self.pode_interagir_arco = False
-                    elif event.key == pygame.K_e and self.pode_interagir_bau and self.player.dinheiro >= 1 and self.player.flechas < self.player.max_flechas:
+                    elif event.key == pygame.K_e and self.pode_interagir_bau and self.player.dinheiro >= 1 and self.player.flechas < self.player.max_flechas and self.player.estado_combate in ('arco_soco', 'arco_espada'):
                         self.player.dinheiro -= 1
                         self.player.flechas = min(self.player.flechas + 5, self.player.max_flechas)
                         self.pode_interagir_bau = False

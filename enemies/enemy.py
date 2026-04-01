@@ -9,6 +9,8 @@ class Enemy(pygame.sprite.Sprite):
         self.health = 10
         self.damage = 10
         self.speed = 2
+        self.hit_cooldown_ms = 500
+        self.ultimo_hit_ms = -self.hit_cooldown_ms
 
         self.pos_inicial = pygame.math.Vector2(posicao)
         self.rect = pygame.Rect(posicao, (80, 80))
@@ -28,6 +30,3 @@ class Enemy(pygame.sprite.Sprite):
 
         self.pos_atual = self.spawn_pos
         return self.spawn_pos
-
-    def disparo(self):
-        pass

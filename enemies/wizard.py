@@ -7,6 +7,7 @@ from config.parametros import LARGURA, ALTURA, ASSETS
 class Wizard(Enemy):
     def __init__(self, posicao):
         super().__init__(posicao)
+        self.health = 30
 
         aux = pygame.image.load(ASSETS + 'wizard.png')
         self.wizard = pygame.transform.scale(aux, (80, 80))
@@ -60,6 +61,9 @@ class Wizard(Enemy):
     def disparo(self):
         agora = pygame.time.get_ticks()
         if (agora - self.ultimo_disparo_ms) < self.cooldown_disparo_ms:
+            return
+
+        if len(self.fireballs_disparadas) >= 1:
             return
 
         direcao = pygame.math.Vector2(
