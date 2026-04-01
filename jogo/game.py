@@ -11,8 +11,9 @@ from jogo.spawn import Spawn
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, player_name='Jogador'):
         self.rodando = True
+        self.player_name = player_name
         pygame.init()
         self.spawn = Spawn()
 
@@ -27,6 +28,10 @@ class Game:
         self.font_money = pygame.font.SysFont(None, 56)
         self.font_hud = pygame.font.SysFont(None, 52)
         self.font_hud_valor = pygame.font.SysFont(None, 40)
+        self.font_tempo = pygame.font.SysFont(None, 62)
+        self.font_overlay_titulo = pygame.font.SysFont(None, 92)
+        self.font_overlay_texto = pygame.font.SysFont(None, 58)
+        self.font_overlay_hint = pygame.font.SysFont(None, 52)
 
         self.mouse_pos = pygame.Rect((0, 0), (0, 0))
         self.player = Gameplay((LARGURA/2 - 40, ALTURA/2 - 40))
@@ -54,6 +59,112 @@ class Game:
         self.flechas_orfas = pygame.sprite.Group()
         self.fireballs_orfas = pygame.sprite.Group()
 
+        self.tutorial_inicio_ms = pygame.time.get_ticks()
+        self.tutorial_duracao_ms = 5000
+        self.tutorial_pulado = False
+        self.inicio_gameplay_ms = None
+        self.ultimo_bonus_score_ms = None
+        self.game_over = False
+        self.game_over_inicio_ms = None
+        self.game_over_duracao_ms = 2000
+
+        self.preco_espada = 30
+        self.preco_arco = 15
+        self.preco_flechas = 5
+        self.preco_vida = 1
+        self.incremento_preco_vida = 1
+
+    def _tutorial_ativo(self):
+        if self.tutorial_pulado:
+            return False
+        tempo_passado = pygame.time.get_ticks() - self.tutorial_inicio_ms
+        return tempo_passado < self.tutorial_duracao_ms
+
+    def _garantir_inicio_gameplay(self):
+        if self.inicio_gameplay_ms is None:
+            agora_ms = pygame.time.get_ticks()
+            self.inicio_gameplay_ms = agora_ms
+            self.ultimo_bonus_score_ms = agora_ms
+
+    def _atualizar_bonus_score_por_tempo(self):
+        if self.ultimo_bonus_score_ms is None:
+            return
+
+        agora_ms = pygame.time.get_ticks()
+        segundos_completos = (agora_ms - self.ultimo_bonus_score_ms) // 1000
+        if segundos_completos > 0:
+            self.player.score += int(segundos_completos) * 10
+            self.ultimo_bonus_score_ms += int(segundos_completos) * 1000
+
+    def _tempo_decorrido_segundos(self):
+        if self.inicio_gameplay_ms is None:
+            return 0
+        agora_ms = pygame.time.get_ticks()
+        return max(0, (agora_ms - self.inicio_gameplay_ms) // 1000)
+
+    def _desenhar_tempo(self):
+        tempo_total = self._tempo_decorrido_segundos()
+        minutos = tempo_total // 60
+        segundos = tempo_total % 60
+        tempo_text = self.font_tempo.render(f'{minutos}:{segundos:02d}', True, (255, 255, 255))
+        self.window.blit(tempo_text, (24, 18))
+
+    def _desenhar_overlay_tutorial(self):
+        if not self._tutorial_ativo():
+            return
+
+        tempo_passado = pygame.time.get_ticks() - self.tutorial_inicio_ms
+
+        restante_ms = self.tutorial_duracao_ms - tempo_passado
+        restante_segundos = max(1, (restante_ms + 999) // 1000)
+
+        painel = pygame.Rect(220, 110, LARGURA - 440, ALTURA - 220)
+        overlay = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 110))
+        self.window.blit(overlay, (0, 0))
+
+        pygame.draw.rect(self.window, (14, 50, 95), painel, border_radius=20)
+        pygame.draw.rect(self.window, (88, 170, 255), painel, 5, border_radius=20)
+
+        titulo = self.font_overlay_titulo.render('COMO JOGAR', True, (255, 220, 0))
+        self.window.blit(titulo, titulo.get_rect(center=(LARGURA // 2, painel.y + 84)))
+
+        linhas = [
+            ('WASD', '- Mover o personagem'),
+            ('Mouse Esquerdo', '- Ataque corpo a corpo'),
+            ('Mouse Direito', '- Ataque à distância'),
+            ('ESC / P', '- Pausar o jogo')
+        ]
+
+        y_texto = painel.y + 168
+        for comando, descricao in linhas:
+            comando_text = self.font_overlay_texto.render(comando, True, (95, 205, 255))
+            desc_text = self.font_overlay_texto.render(descricao, True, (230, 230, 230))
+            self.window.blit(comando_text, (painel.x + 48, y_texto))
+            self.window.blit(desc_text, (painel.x + 280, y_texto))
+            y_texto += 66
+
+        objetivo = self.font_overlay_texto.render('Objetivo: Sobreviva e derrote os inimigos!', True, (255, 190, 95))
+        self.window.blit(objetivo, objetivo.get_rect(center=(LARGURA // 2, painel.bottom - 84)))
+
+        contador = self.font_overlay_hint.render(
+            f'Começando em {restante_segundos}s | ENTER ou Clique Esq. para pular',
+            True,
+            (205, 205, 225)
+        )
+        self.window.blit(contador, contador.get_rect(center=(LARGURA // 2, painel.bottom - 36)))
+
+    def _desenhar_overlay_game_over(self):
+        overlay = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 165))
+        self.window.blit(overlay, (0, 0))
+
+        titulo = self.font_overlay_titulo.render('GAME OVER', True, (255, 50, 50))
+        score = self.font_overlay_texto.render(f'Score Final: {self.player.score}', True, (255, 220, 0))
+
+        self.window.blit(titulo, titulo.get_rect(center=(LARGURA // 2, ALTURA // 2 - 60)))
+        self.window.blit(score, score.get_rect(center=(LARGURA // 2, ALTURA // 2 + 20)))
+
     def desenhar_barra(self, pos, tamanho, valor_atual, valor_maximo, cor_preenchimento, cor_fundo):
         barra_rect = pygame.Rect(pos, tamanho)
         pygame.draw.rect(self.window, cor_fundo, barra_rect)
@@ -77,16 +188,13 @@ class Game:
         self.window.blit(self.objeto.arco, (400, 480))   
         self.window.blit(self.objeto.espada, (800, 480))        
 
-        for inimigo in self.spawn.inimigos:
-            if inimigo.alive() and inimigo.health > 0:
-                inimigo.movimentacao()
-
         score_text = self.font_score.render(f'SCORE: {self.player.score}', True, (255, 255, 255))
         money_text = self.font_money.render(f'${self.player.dinheiro}', True, (255, 215, 0))
 
         score_rect = score_text.get_rect(center=(LARGURA // 2, 40))
         money_rect = money_text.get_rect(center=(LARGURA // 2, 90))
 
+        self._desenhar_tempo()
         self.window.blit(score_text, score_rect)
         self.window.blit(money_text, money_rect)
 
@@ -130,7 +238,7 @@ class Game:
             if self.player.estado_combate in ('espada', 'arco_espada'):
                 buy_text = self.font_money.render("você já comprou uma espada!", True, (255, 255, 255))
             else:
-                buy_text = self.font_money.render("aperte E para comprar espada (1$)", True, (255, 255, 255))
+                buy_text = self.font_money.render(f"aperte E para comprar espada ({self.preco_espada}$)", True, (255, 255, 255))
             buy_rect = buy_text.get_rect(center=(LARGURA // 2, ALTURA // 2))
             self.window.blit(buy_text, buy_rect)
         elif self.pode_interagir_bau:
@@ -138,7 +246,7 @@ class Game:
                 if self.player.flechas >= self.player.max_flechas:
                     flechas_text = self.font_money.render("Você já tem o máximo de flechas possíveis", True, (255, 255, 255))
                 else:
-                    flechas_text = self.font_money.render("aperte E para comprar flechas (1$)", True, (255, 255, 255))
+                    flechas_text = self.font_money.render(f"aperte E para comprar flechas ({self.preco_flechas}$)", True, (255, 255, 255))
                 flechas_rect = flechas_text.get_rect(center=(LARGURA // 2, ALTURA // 2))
                 self.window.blit(flechas_text, flechas_rect)
             else:
@@ -147,7 +255,7 @@ class Game:
                 self.window.blit(msg_text, msg_rect)
         elif self.pode_interagir_kit:
             if self.player.vida < 10:
-                kit_text = self.font_money.render("aperte E para usar kitmedico (1$)", True, (255, 255, 255))
+                kit_text = self.font_money.render(f"aperte E para usar kitmedico ({self.preco_vida}$)", True, (255, 255, 255))
             else:
                 kit_text = self.font_money.render("vida cheia!", True, (255, 255, 255))
             kit_rect = kit_text.get_rect(center=(LARGURA // 2, ALTURA // 2))
@@ -156,7 +264,7 @@ class Game:
             if self.player.estado_combate in ('arco_soco', 'arco_espada'):
                 arco_text = self.font_money.render("você já comprou um arco", True, (255, 255, 255))
             else:
-                arco_text = self.font_money.render("aperte E para comprar arco (1$)", True, (255, 255, 255))
+                arco_text = self.font_money.render(f"aperte E para comprar arco ({self.preco_arco}$)", True, (255, 255, 255))
             arco_rect = arco_text.get_rect(center=(LARGURA // 2, ALTURA // 2))
             self.window.blit(arco_text, arco_rect)
 
@@ -179,6 +287,11 @@ class Game:
             self.window.blit(self.player.soco_vento_image_rotated, self.player.soco_vento)
         if self.player.espada_vento:
             self.window.blit(self.player.espada_vento_image_rotated, self.player.espada_vento)
+
+        self._desenhar_overlay_tutorial()
+        if self.game_over:
+            self._desenhar_overlay_game_over()
+
         pygame.display.update()
 
     def _matar_inimigo(self, inimigo, com_capitalizacao=True):
@@ -354,34 +467,78 @@ class Game:
 
     def executar(self):
         while self.rodando:
+            tutorial_ativo = self._tutorial_ativo()
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.rodando = False
+                if self.game_over:
+                    continue
+
+                if tutorial_ativo:
+                    if event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                        self.tutorial_pulado = True
+                        tutorial_ativo = False
+                        self._garantir_inicio_gameplay()
+                    elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        self.tutorial_pulado = True
+                        tutorial_ativo = False
+                        self._garantir_inicio_gameplay()
+                    continue
+
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_e and self.pode_comprar_espada and self.player.dinheiro >= 1:
-                        self.player.dinheiro -= 1
+                    if event.key == pygame.K_e and self.pode_comprar_espada and self.player.dinheiro >= self.preco_espada:
+                        self.player.dinheiro -= self.preco_espada
                         self.player.equipar_espada()
                         self.pode_comprar_espada = False
-                    elif event.key == pygame.K_e and self.pode_interagir_arco and self.player.dinheiro >= 1 and self.player.estado_combate not in ('arco_soco', 'arco_espada'):
-                        self.player.dinheiro -= 1
+                    elif event.key == pygame.K_e and self.pode_interagir_arco and self.player.dinheiro >= self.preco_arco and self.player.estado_combate not in ('arco_soco', 'arco_espada'):
+                        self.player.dinheiro -= self.preco_arco
                         self.player.equipar_arco()
                         self.pode_interagir_arco = False
-                    elif event.key == pygame.K_e and self.pode_interagir_bau and self.player.dinheiro >= 1 and self.player.flechas < self.player.max_flechas and self.player.estado_combate in ('arco_soco', 'arco_espada'):
-                        self.player.dinheiro -= 1
+                    elif event.key == pygame.K_e and self.pode_interagir_bau and self.player.dinheiro >= self.preco_flechas and self.player.flechas < self.player.max_flechas and self.player.estado_combate in ('arco_soco', 'arco_espada'):
+                        self.player.dinheiro -= self.preco_flechas
                         self.player.flechas = min(self.player.flechas + 5, self.player.max_flechas)
                         self.pode_interagir_bau = False
-                    elif event.key == pygame.K_e and self.pode_interagir_kit and self.player.vida < 10 and self.player.dinheiro >= 1:
-                        self.player.dinheiro -= 1
+                    elif event.key == pygame.K_e and self.pode_interagir_kit and self.player.vida < 10 and self.player.dinheiro >= self.preco_vida:
+                        self.player.dinheiro -= self.preco_vida
                         self.player.vida = min(self.player.vida + 1, self.player.max_vida)
+                        self.preco_vida += self.incremento_preco_vida
                         self.pode_interagir_kit = False
 
-            self.player.movimentacao()
-            self.player.atacar()
-            self.player.atualizar_projeteis()
+            if not self.game_over and not tutorial_ativo:
+                self._garantir_inicio_gameplay()
+                self._atualizar_bonus_score_por_tempo()
+
+                for inimigo in self.spawn.inimigos:
+                    if inimigo.alive() and inimigo.health > 0:
+                        inimigo.movimentacao()
+
+                self.player.movimentacao()
+                self.player.atacar()
+                self.player.atualizar_projeteis()
+                self.colisoes()
+                self.spawn.atualizar_spawn_inimigos()
+
+                if self.player.vida <= 0:
+                    self.player.vida = 0
+                    self.game_over = True
+                    self.game_over_inicio_ms = pygame.time.get_ticks()
+
             self.desenhar()
-            self.colisoes()
-            self.spawn.atualizar_spawn_inimigos()
+
+            if self.game_over and self.game_over_inicio_ms is not None:
+                tempo_game_over = pygame.time.get_ticks() - self.game_over_inicio_ms
+                if tempo_game_over >= self.game_over_duracao_ms:
+                    return {
+                        'status': 'GAME_OVER',
+                        'nome': self.player_name,
+                        'score': self.player.score
+                    }
+
             self.relogio.tick(FPS)
 
-        pygame.quit()
+        return {
+            'status': 'SAIR',
+            'nome': self.player_name,
+            'score': self.player.score
+        }

@@ -7,7 +7,7 @@ from config.parametros import LARGURA, ALTURA, ASSETS
 class Wizard(Enemy):
     def __init__(self, posicao):
         super().__init__(posicao)
-        self.health = 30
+        self.health = 10
 
         aux = pygame.image.load(ASSETS + 'wizard.png')
         self.wizard = pygame.transform.scale(aux, (80, 80))
@@ -29,9 +29,12 @@ class Wizard(Enemy):
         if direcao.length_squared() == 0:
             direcao = pygame.math.Vector2(1, 0)
 
+        nivel_atual = getattr(self.player, 'nivel', 1)
+        multiplicador_nivel = 1 + (max(nivel_atual, 1) - 1) * 0.10
+
         fireball = pygame.sprite.Sprite()
         fireball.direcao = direcao.normalize()
-        fireball.velocidade = 2
+        fireball.velocidade = 2 * multiplicador_nivel
         fireball.damage = 1
         fireball.angulo = 0
         fireball.rotacao_por_frame = -3

@@ -30,9 +30,12 @@ class Skeleton(Enemy):
         if direcao.length_squared() == 0:
             direcao = pygame.math.Vector2(1, 0)
 
+        nivel_atual = getattr(self.player, 'nivel', 1)
+        multiplicador_nivel = 1 + (max(nivel_atual, 1) - 1) * 0.10
+
         flecha = pygame.sprite.Sprite()
         flecha.direcao = direcao.normalize()
-        flecha.velocidade = 6
+        flecha.velocidade = 6 * multiplicador_nivel
         flecha.damage = 1
 
         direcao_base_sprite = pygame.math.Vector2(1, -1)

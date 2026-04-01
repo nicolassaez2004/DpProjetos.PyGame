@@ -37,7 +37,7 @@ class Gameplay(Player):
             self.dinheiro += 3
             self.score += 20 + bonus_score
         elif isinstance(inimigo, Wizard):
-            self.dinheiro += 5
+            self.dinheiro += 3
             self.score += 30 + bonus_score
 
         self.registrar_abate()
