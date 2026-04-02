@@ -7,14 +7,14 @@ class Spawn:
     def __init__(self):
         self.inimigos = pygame.sprite.Group()
         self.tipos_inimigos = []
-        self.player = None
+        self.gameplay = None
         self.objeto = None
         self.spawn_cooldown_ms = 900
         self.ultimo_spawn_ms = 0
     
     def spawn_inimigo(self):
             tem_ghost = any(isinstance(i, Ghost) for i in self.inimigos)
-            if self.player.nivel == 1 and not tem_ghost:
+            if self.gameplay.nivel == 1 and not tem_ghost:
                 tipo_inimigo = Ghost
             else:
                 tipo_inimigo = random.choice(self.tipos_inimigos)
@@ -28,11 +28,11 @@ class Spawn:
                 pos_spawn = inimigo.random_spawn()
 
             inimigo.rect.topleft = pos_spawn
-            self.player.aplicar_scaling_inimigo(inimigo)
+            self.gameplay.aplicar_scaling_inimigo(inimigo)
             self.inimigos.add(inimigo)
 
     def atualizar_spawn_inimigos(self):
         agora = pygame.time.get_ticks()
-        if len(self.inimigos) < self.player.limite_inimigos and (agora - self.ultimo_spawn_ms) >= self.spawn_cooldown_ms:
+        if len(self.inimigos) < self.gameplay.limite_inimigos and (agora - self.ultimo_spawn_ms) >= self.spawn_cooldown_ms:
             self.spawn_inimigo()
             self.ultimo_spawn_ms = agora

@@ -4,9 +4,9 @@ from enemies.wizard import Wizard
 from jogador.player import Player
 
 
-class Gameplay(Player):
+class Gameplay:
     def __init__(self, posicao):
-        super().__init__(posicao)
+        self.player = Player(posicao)
         self.nivel = 1
         self.score = 0
         self.inimigos_derrotados = 0
@@ -31,13 +31,13 @@ class Gameplay(Player):
     def capitalizacao(self, inimigo):
         bonus_score = (self.nivel - 1) * 10
         if isinstance(inimigo, Ghost):
-            self.dinheiro += 2
+            self.player.dinheiro += 2
             self.score += 10 + bonus_score
         elif isinstance(inimigo, Skeleton):
-            self.dinheiro += 3
+            self.player.dinheiro += 3
             self.score += 20 + bonus_score
         elif isinstance(inimigo, Wizard):
-            self.dinheiro += 3
+            self.player.dinheiro += 3
             self.score += 30 + bonus_score
 
         self.registrar_abate()

@@ -1,10 +1,10 @@
 import pygame
 
-from jogador.guerreiro import Combat
+from jogador.guerreiro import Guerreiro
 from config.parametros import ASSETS
 
 
-class Player(Combat, pygame.sprite.Sprite):
+class Player(Guerreiro, pygame.sprite.Sprite):
     def __init__(self, posicao):
         super(Player, self).__init__()
         aux_movimento = ['parado', 'andando', 'batendo']

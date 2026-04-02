@@ -14,8 +14,7 @@ class Game:
         self.rodando = True
         self.player_name = player_name
         pygame.init()
-        self.spawn = Spawn()
-
+        
         self.bg = pygame.image.load(ASSETS + 'background.jpg')
         self.bg = pygame.transform.scale(self.bg, (1280, 720))
         self.window = pygame.display.set_mode((LARGURA, ALTURA))
@@ -31,23 +30,25 @@ class Game:
         self.font_overlay_titulo = pygame.font.SysFont(None, 92)
         self.font_overlay_texto = pygame.font.SysFont(None, 58)
         self.font_overlay_hint = pygame.font.SysFont(None, 52)
-
-        self.player = Gameplay((LARGURA/2 - 40, ALTURA/2 - 40))
+        self.gameplay = Gameplay((LARGURA/2 - 40, ALTURA/2 - 40))
+        self.player = self.gameplay.player
 
         self.objeto = Object()
 
         self.todo_mundo = pygame.sprite.Group([self.player])
         self.tipos_inimigos = [Skeleton, Wizard, Ghost]
+        
+        self.spawn = Spawn()
         self.spawn_cooldown_ms = 900
         self.ultimo_spawn_ms = pygame.time.get_ticks()
-
         self.spawn.player = self.player
+        self.spawn.gameplay = self.gameplay
         self.spawn.objeto = self.objeto
         self.spawn.tipos_inimigos = self.tipos_inimigos
         self.spawn.spawn_cooldown_ms = self.spawn_cooldown_ms
         self.spawn.ultimo_spawn_ms = self.ultimo_spawn_ms
 
-        for _ in range(self.player.limite_inimigos):
+        for _ in range(self.gameplay.limite_inimigos):
             self.spawn.spawn_inimigo()
         
         self.pode_comprar_espada = False
@@ -93,7 +94,7 @@ class Game:
         agora_ms = pygame.time.get_ticks()
         segundos_completos = (agora_ms - self.ultimo_bonus_score_ms) // 1000
         if segundos_completos > 0:
-            self.player.score += int(segundos_completos) * 10
+            self.gameplay.score += int(segundos_completos) * 10
             self.ultimo_bonus_score_ms += int(segundos_completos) * 1000
 
     def tempo_decorrido_segundos(self):
@@ -175,7 +176,7 @@ class Game:
         self.window.blit(overlay, (0, 0))
 
         titulo = self.font_overlay_titulo.render('GAME OVER', True, (255, 50, 50))
-        score = self.font_overlay_texto.render(f'Score Final: {self.player.score}', True, (255, 220, 0))
+        score = self.font_overlay_texto.render(f'Score Final: {self.gameplay.score}', True, (255, 220, 0))
 
         self.window.blit(titulo, titulo.get_rect(center=(LARGURA // 2, ALTURA // 2 - 60)))
         self.window.blit(score, score.get_rect(center=(LARGURA // 2, ALTURA // 2 + 20)))
@@ -210,7 +211,7 @@ class Game:
         self.window.blit(self.objeto.arco, (400, 480))   
         self.window.blit(self.objeto.espada, (800, 480))        
 
-        score_text = self.font_score.render(f'SCORE: {self.player.score}', True, (255, 255, 255))
+        score_text = self.font_score.render(f'SCORE: {self.gameplay.score}', True, (255, 255, 255))
         money_text = self.font_money.render(f'${self.player.dinheiro}', True, (255, 215, 0))
 
         score_rect = score_text.get_rect(center=(LARGURA // 2, 40))
@@ -250,8 +251,8 @@ class Game:
         flecha_text_rect = flecha_text.get_rect(midright=(flecha_barra_rect.left - 10, flecha_barra_rect.centery))
         self.window.blit(flecha_text, flecha_text_rect)
 
-        nivel_text_outline = self.font_hud.render(f'Nivel: {self.player.nivel}', True, (10, 35, 90))
-        nivel_text = self.font_hud.render(f'Nivel: {self.player.nivel}', True, (95, 210, 255))
+        nivel_text_outline = self.font_hud.render(f'Nivel: {self.gameplay.nivel}', True, (10, 35, 90))
+        nivel_text = self.font_hud.render(f'Nivel: {self.gameplay.nivel}', True, (95, 210, 255))
         nivel_rect = nivel_text.get_rect(center=(self.objeto.plataforma.centerx, self.objeto.plataforma.bottom + 48))
         self.window.blit(nivel_text_outline, (nivel_rect.x + 2, nivel_rect.y + 2))
         self.window.blit(nivel_text, nivel_rect)
@@ -341,7 +342,7 @@ class Game:
                 self.fireballs_orfas.add(p)
         inimigo.kill()
         if com_capitalizacao:
-            self.player.capitalizacao(inimigo)
+            self.gameplay.capitalizacao(inimigo)
 
     def colisoes(self):
 
@@ -571,7 +572,7 @@ class Game:
                     return {
                         'status': 'GAME_OVER',
                         'nome': self.player_name,
-                        'score': self.player.score
+                        'score': self.gameplay.score
                     }
 
             self.relogio.tick(FPS)
@@ -579,5 +580,5 @@ class Game:
         return {
             'status': 'SAIR',
             'nome': self.player_name,
-            'score': self.player.score
+            'score': self.gameplay.score
         }

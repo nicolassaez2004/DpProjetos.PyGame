@@ -3,7 +3,7 @@ import pygame
 from config.parametros import ALTURA, LARGURA
 
 
-class Combat:
+class Guerreiro:
     def atualizar_animacoes_vento(self):
         agora = pygame.time.get_ticks()
 

@@ -21,13 +21,13 @@ class Enemy(pygame.sprite.Sprite):
     def random_spawn(self):
         self.spawn_pos = ()
         lado = random.randint(1, 4)
-        if lado == 1: #cima
+        if lado == 1:
             self.spawn_pos = (random.randint(80, 1200), -80)
-        if lado == 2: #baixo
+        if lado == 2:
             self.spawn_pos = (random.randint(80, 1200), 660)
-        if lado == 3: #esquerda
+        if lado == 3:
             self.spawn_pos = (-80, random.randint(80, 660))
-        if lado == 4: #direita
+        if lado == 4:
             self.spawn_pos = (1200, random.randint(80, 660))
 
         self.pos_atual = self.spawn_pos
