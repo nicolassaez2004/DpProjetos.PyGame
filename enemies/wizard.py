@@ -12,7 +12,18 @@ class Wizard(Enemy):
         aux = pygame.image.load(ASSETS + 'wizard.png')
         self.wizard = pygame.transform.scale(aux, (80, 80))
         self.wizard_flip = pygame.transform.flip(self.wizard, True, False)
-        self.image = self.wizard
+
+        wizard_spawn_sheet = pygame.image.load(ASSETS + 'wizard_spawnando.png').convert_alpha()
+        self.wizard_spawn_frames = []
+        for linha in range(2):
+            for coluna in range(2):
+                area_frame = pygame.Rect(coluna * 16, linha * 16, 16, 16)
+                frame = pygame.Surface((16, 16), pygame.SRCALPHA)
+                frame.blit(wizard_spawn_sheet, (0, 0), area_frame)
+                self.wizard_spawn_frames.append(pygame.transform.scale(frame, (80, 80)))
+        self.image = self.wizard_spawn_frames[0]
+        self.spawn_duracao_ms = 1000
+        self.spawn_inicio_ms = pygame.time.get_ticks()
 
         self.estado = "spawnando"
         self.timer = 0  
@@ -25,7 +36,7 @@ class Wizard(Enemy):
         self.cooldown_disparo_ms = 3600
         self.ultimo_disparo_ms = pygame.time.get_ticks()
 
-    def _criar_fireball(self, direcao):
+    def criar_fireball(self, direcao):
         if direcao.length_squared() == 0:
             direcao = pygame.math.Vector2(1, 0)
 
@@ -45,7 +56,7 @@ class Wizard(Enemy):
         fireball.mask = pygame.mask.from_surface(fireball.image)
         return fireball
 
-    def _atualizar_fireballs(self):
+    def atualizar_fireballs(self):
         for fireball in list(self.fireballs_disparadas):
             centro_anterior = fireball.rect.center
             fireball.angulo += fireball.rotacao_por_frame
@@ -74,7 +85,7 @@ class Wizard(Enemy):
             self.player.rect.centery - self.rect.centery
         )
 
-        fireball = self._criar_fireball(direcao)
+        fireball = self.criar_fireball(direcao)
         self.fireballs_disparadas.add(fireball)
         self.ultimo_disparo_ms = agora
 
@@ -89,11 +100,18 @@ class Wizard(Enemy):
     def movimentacao(self):
         if self.estado == "spawnando":
             self.velocidade = pygame.math.Vector2(0, 0)
-            self.timer += 1
-            if self.timer >= 120:
+            agora = pygame.time.get_ticks()
+            tempo_spawn = agora - self.spawn_inicio_ms
+
+            progresso = min(0.999, max(0, tempo_spawn) / self.spawn_duracao_ms)
+            frame_indice = min(len(self.wizard_spawn_frames) - 1, int(progresso * len(self.wizard_spawn_frames)))
+            self.image = self.wizard_spawn_frames[frame_indice]
+
+            if tempo_spawn >= self.spawn_duracao_ms:
                 self.estado = "parado"
                 self.timer = 0
-            self._atualizar_fireballs()
+                self.image = self.wizard if self.player.rect.centerx >= self.rect.centerx else self.wizard_flip
+            self.atualizar_fireballs()
             return
         
         if self.estado == "parado":
@@ -141,4 +159,4 @@ class Wizard(Enemy):
         self.image = self.wizard if self.player.rect.centerx >= self.rect.centerx else self.wizard_flip
         self.rect = new_rect
         self.disparo()
-        self._atualizar_fireballs()
+        self.atualizar_fireballs()

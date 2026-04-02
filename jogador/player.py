@@ -34,14 +34,35 @@ class Player(Combat, pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.velocidade = pygame.math.Vector2(0, 0)
         self.soco_vento = None
-        self.soco_vento_image = pygame.transform.scale(pygame.image.load(ASSETS + 'soco_vento.png'), (80, 80))
+        soco_vento_sheet = pygame.image.load(ASSETS + 'soco_vento.png').convert_alpha()
+        self.soco_vento_frames = []
+        for linha in range(2):
+            for coluna in range(2):
+                area_frame = pygame.Rect(coluna * 16, linha * 16, 16, 16)
+                frame = pygame.Surface((16, 16), pygame.SRCALPHA)
+                frame.blit(soco_vento_sheet, (0, 0), area_frame)
+                self.soco_vento_frames.append(pygame.transform.scale(frame, (80, 80)))
+        self.soco_vento_image = self.soco_vento_frames[0]
         self.soco_vento_image_rotated = self.soco_vento_image
-        self.soco_vento_image_rotated = self.soco_vento_image
+        self.soco_vento_frame_indice = 0
+        self.soco_vento_inicio_ms = 0
+        self.soco_vento_angulo = 0
         
         self.espada_vento = None
         self.espada_vento_hitbox = None
-        self.espada_vento_image = pygame.transform.scale(pygame.image.load(ASSETS + 'espada_vento.png'), (160, 160))
+        espada_vento_sheet = pygame.image.load(ASSETS + 'espada_vento.png').convert_alpha()
+        self.espada_vento_frames = []
+        for linha in range(2):
+            for coluna in range(2):
+                area_frame = pygame.Rect(coluna * 32, linha * 32, 32, 32)
+                frame = pygame.Surface((32, 32), pygame.SRCALPHA)
+                frame.blit(espada_vento_sheet, (0, 0), area_frame)
+                self.espada_vento_frames.append(pygame.transform.scale(frame, (160, 160)))
+        self.espada_vento_image = self.espada_vento_frames[0]
         self.espada_vento_image_rotated = self.espada_vento_image
+        self.espada_vento_frame_indice = 0
+        self.espada_vento_inicio_ms = 0
+        self.espada_vento_angulo = 0
 
         self.arrow_image = pygame.transform.scale_by(pygame.image.load(ASSETS + 'arrow.png'), 5)
         self.flechas_disparadas = pygame.sprite.Group()
@@ -60,6 +81,8 @@ class Player(Combat, pygame.sprite.Sprite):
         self.vida = 10
         self.max_flechas = 30
         self.flechas = 0
+        self.dano_flash_inicio_ms = 0
+        self.dano_flash_duracao_ms = 300
         
     def movimentacao(self):
         self.key = pygame.key.get_pressed()

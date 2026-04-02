@@ -4,7 +4,38 @@ from config.parametros import ALTURA, LARGURA
 
 
 class Combat:
-    def _criar_flecha(self, posicao, direcao):
+    def atualizar_animacoes_vento(self):
+        agora = pygame.time.get_ticks()
+
+        if self.soco_vento and agora < self.soco_vento_expira_ms and self.soco_vento_frames:
+            duracao_total = max(1, self.duracao_vento_ms)
+            tempo_decorrido = max(0, agora - self.soco_vento_inicio_ms)
+            progresso = min(0.999, tempo_decorrido / duracao_total)
+            frame_indice = min(len(self.soco_vento_frames) - 1, int(progresso * len(self.soco_vento_frames)))
+
+            if frame_indice != self.soco_vento_frame_indice:
+                centro = self.soco_vento.center
+                self.soco_vento_frame_indice = frame_indice
+                self.soco_vento_image = self.soco_vento_frames[frame_indice]
+                self.soco_vento_image_rotated = pygame.transform.rotate(self.soco_vento_image, self.soco_vento_angulo)
+                self.soco_vento = self.soco_vento_image_rotated.get_rect(center=centro)
+
+        if self.espada_vento and agora < self.espada_vento_expira_ms and self.espada_vento_frames:
+            duracao_total = max(1, self.duracao_vento_ms)
+            tempo_decorrido = max(0, agora - self.espada_vento_inicio_ms)
+            progresso = min(0.999, tempo_decorrido / duracao_total)
+            frame_indice = min(len(self.espada_vento_frames) - 1, int(progresso * len(self.espada_vento_frames)))
+
+            if frame_indice != self.espada_vento_frame_indice:
+                centro = self.espada_vento.center
+                self.espada_vento_frame_indice = frame_indice
+                self.espada_vento_image = self.espada_vento_frames[frame_indice]
+                self.espada_vento_image_rotated = pygame.transform.rotate(self.espada_vento_image, self.espada_vento_angulo)
+                self.espada_vento = self.espada_vento_image_rotated.get_rect(center=centro)
+                if self.espada_vento_hitbox:
+                    self.espada_vento_hitbox.center = self.espada_vento.center
+
+    def criar_flecha(self, posicao, direcao):
         if direcao.length_squared() == 0:
             direcao = pygame.math.Vector2(1, 0)
 
@@ -20,11 +51,11 @@ class Combat:
         sprite.mask = pygame.mask.from_surface(sprite.image)
         return sprite
 
-    def _atualizar_flecha(self, flecha):
+    def atualizar_flecha(self, flecha):
         deslocamento = flecha.direcao * flecha.velocidade
         flecha.rect.move_ip(deslocamento.x, deslocamento.y)
 
-    def _flecha_fora_da_tela(self, flecha):
+    def flecha_fora_da_tela(self, flecha):
         return (
             flecha.rect.right < 0 or flecha.rect.left > LARGURA or
             flecha.rect.bottom < 0 or flecha.rect.top > ALTURA
@@ -32,15 +63,15 @@ class Combat:
 
     def atualizar_projeteis(self):
         for flecha in list(self.flechas_disparadas):
-            self._atualizar_flecha(flecha)
-            if self._flecha_fora_da_tela(flecha):
+            self.atualizar_flecha(flecha)
+            if self.flecha_fora_da_tela(flecha):
                 flecha.kill()
 
     def ataque_soco(self, mouse_pos):
         agora = pygame.time.get_ticks()
         if agora - self.ultimo_soco_ms < self.cooldown_soco_ms:
             if agora >= self.soco_vento_expira_ms:
-                self._sprite_idle()
+                self.sprite_idle()
             return
         self.ultimo_soco_ms = agora
         self.soco_vento_expira_ms = agora + self.duracao_vento_ms
@@ -55,8 +86,11 @@ class Combat:
         wind_distance = 80
         wind_pos = pygame.math.Vector2(self.rect.center) + direction * wind_distance
 
-        angulo = -pygame.math.Vector2(1, 0).angle_to(direction)
-        self.soco_vento_image_rotated = pygame.transform.rotate(self.soco_vento_image, angulo)
+        self.soco_vento_inicio_ms = agora
+        self.soco_vento_frame_indice = 0
+        self.soco_vento_image = self.soco_vento_frames[0]
+        self.soco_vento_angulo = -pygame.math.Vector2(1, 0).angle_to(direction)
+        self.soco_vento_image_rotated = pygame.transform.rotate(self.soco_vento_image, self.soco_vento_angulo)
         self.soco_vento = self.soco_vento_image_rotated.get_rect(center=wind_pos)
         self.espada_vento = None
         self.espada_vento_hitbox = None
@@ -65,7 +99,7 @@ class Combat:
         agora = pygame.time.get_ticks()
         if agora - self.ultimo_espada_ms < self.cooldown_espada_ms:
             if agora >= self.espada_vento_expira_ms:
-                self._sprite_idle()
+                self.sprite_idle()
             return
         self.ultimo_espada_ms = agora
         self.espada_vento_expira_ms = agora + self.duracao_vento_ms
@@ -80,14 +114,17 @@ class Combat:
         wind_distance = 80
         wind_pos = pygame.math.Vector2(self.rect.center) + direction * wind_distance
 
-        angulo = -pygame.math.Vector2(1, 0).angle_to(direction)
-        self.espada_vento_image_rotated = pygame.transform.rotate(self.espada_vento_image, angulo)
+        self.espada_vento_inicio_ms = agora
+        self.espada_vento_frame_indice = 0
+        self.espada_vento_image = self.espada_vento_frames[0]
+        self.espada_vento_angulo = -pygame.math.Vector2(1, 0).angle_to(direction)
+        self.espada_vento_image_rotated = pygame.transform.rotate(self.espada_vento_image, self.espada_vento_angulo)
         self.espada_vento = self.espada_vento_image_rotated.get_rect(center=wind_pos)
         self.espada_vento_hitbox = pygame.Rect(0, 0, 160, 160)
         self.espada_vento_hitbox.center = self.espada_vento.center
         self.soco_vento = None
 
-    def _sprite_idle(self):
+    def sprite_idle(self):
         self.atualizar_estado_combate()
         if self.estado_combate == 'soco':
             self.image = self.knight_parado if self.olhando_direita else self.knight_parado_flip
@@ -103,6 +140,7 @@ class Combat:
         self.espada_vento_hitbox = None
 
     def atacar(self):
+        self.atualizar_animacoes_vento()
         mouse_pos = pygame.mouse.get_pos()
         botoes_mouse = pygame.mouse.get_pressed()
         self.olhando_direita = (mouse_pos[0] >= self.rect.centerx)
@@ -120,7 +158,7 @@ class Combat:
             soco_ativo = agora < self.soco_vento_expira_ms
             espada_ativa = agora < self.espada_vento_expira_ms
             if not soco_ativo and not espada_ativa:
-                self._sprite_idle()
+                self.sprite_idle()
 
     def ataque_arco(self, mouse_pos):
         self.image = self.knight_arco_espada if self.estado_combate == 'arco_espada' else self.knight_arco_soco
@@ -144,7 +182,7 @@ class Combat:
             direcao = pygame.math.Vector2(1, 0)
 
         origem = pygame.math.Vector2(self.rect.center) + direcao.normalize() * 48
-        flecha = self._criar_flecha(origem, direcao)
+        flecha = self.criar_flecha(origem, direcao)
         self.flechas_disparadas.add(flecha)
         self.flechas -= 1
         self.ultimo_disparo_flecha_ms = agora

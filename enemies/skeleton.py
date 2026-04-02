@@ -26,7 +26,7 @@ class Skeleton(Enemy):
         self.cooldown_disparo_ms = 3000
         self.ultimo_disparo_ms = pygame.time.get_ticks()
 
-    def _criar_flecha(self, direcao):
+    def criar_flecha(self, direcao):
         if direcao.length_squared() == 0:
             direcao = pygame.math.Vector2(1, 0)
 
@@ -45,7 +45,7 @@ class Skeleton(Enemy):
         flecha.mask = pygame.mask.from_surface(flecha.image)
         return flecha
 
-    def _atualizar_flechas(self):
+    def atualizar_flechas(self):
         for flecha in list(self.flechas_disparadas):
             deslocamento = flecha.direcao * flecha.velocidade
             flecha.rect.move_ip(deslocamento.x, deslocamento.y)
@@ -65,7 +65,7 @@ class Skeleton(Enemy):
             self.player.rect.centery - self.rect.centery
         )
 
-        flecha = self._criar_flecha(direcao)
+        flecha = self.criar_flecha(direcao)
         self.flechas_disparadas.add(flecha)
         self.ultimo_disparo_ms = agora
 
@@ -136,4 +136,4 @@ class Skeleton(Enemy):
         self.image = self.skeleton if self.player.rect.centerx >= self.rect.centerx else self.skeleton_inverso
         self.rect = new_rect
         self.disparo()
-        self._atualizar_flechas()
+        self.atualizar_flechas()

@@ -1,6 +1,6 @@
 import pygame
 
-from config.parametros import LARGURA, ALTURA, FPS
+from config.parametros import LARGURA, ALTURA, ASSETS
 
 
 class LeaderboardScreen:
@@ -9,21 +9,16 @@ class LeaderboardScreen:
 		self.clock = pygame.time.Clock()
 		self.fonte_titulo = pygame.font.SysFont(None, 120)
 		self.fonte_destaque = pygame.font.SysFont(None, 68)
-		self.fonte_item = pygame.font.SysFont(None, 58)
-		self.fonte_hint = pygame.font.SysFont(None, 52)
+		self.fonte_item = pygame.font.SysFont(None, 44)
+		self.fonte_hint = pygame.font.SysFont(None, 46)
 		self.cor_titulo = (255, 220, 0)
-		self.bg_top = (16, 20, 72)
-		self.bg_bottom = (10, 10, 42)
+		self.fundo = pygame.image.load(ASSETS + 'bgleaderboard.jpg')
+		self.fundo = pygame.transform.scale(self.fundo, (LARGURA, ALTURA))
 
-	def _desenhar_fundo(self):
-		for y in range(ALTURA):
-			t = y / ALTURA
-			r = int(self.bg_top[0] * (1 - t) + self.bg_bottom[0] * t)
-			g = int(self.bg_top[1] * (1 - t) + self.bg_bottom[1] * t)
-			b = int(self.bg_top[2] * (1 - t) + self.bg_bottom[2] * t)
-			pygame.draw.line(self.window, (r, g, b), (0, y), (LARGURA, y))
+	def desenhar_fundo(self):
+		self.window.blit(self.fundo, (0, 0))
 
-	def _cor_por_posicao(self, indice):
+	def cor_por_posicao(self, indice):
 		if indice == 0:
 			return (255, 220, 0)
 		if indice == 1:
@@ -41,7 +36,7 @@ class LeaderboardScreen:
 					if event.key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_KP_ENTER):
 						return 'MENU'
 
-			self._desenhar_fundo()
+			self.desenhar_fundo()
 
 			titulo_sombra = self.fonte_titulo.render('PLACAR', True, (0, 0, 0))
 			titulo = self.fonte_titulo.render('PLACAR', True, self.cor_titulo)
@@ -60,15 +55,23 @@ class LeaderboardScreen:
 			subtitulo = self.fonte_destaque.render('TOP 10', True, (240, 240, 240))
 			self.window.blit(subtitulo, subtitulo.get_rect(center=(LARGURA // 2, 258)))
 
-			y_inicial = 320
-			espacamento = 46
+			y_inicial = 300
+			y_limite = ALTURA - 96
 			if ranking:
-				for indice, entrada in enumerate(ranking[:10]):
+				top10 = ranking[:10]
+				total = len(top10)
+				if total > 1:
+					espacamento = (y_limite - y_inicial) / (total - 1)
+				else:
+					espacamento = 0
+
+				for indice, entrada in enumerate(top10):
 					nome = entrada.get('nome', 'SEM NOME')
 					score = entrada.get('score', 0)
 					texto = f'{indice + 1}. {nome} - {score} pontos'
-					item = self.fonte_item.render(texto, True, self._cor_por_posicao(indice))
-					self.window.blit(item, item.get_rect(center=(LARGURA // 2, y_inicial + indice * espacamento)))
+					item = self.fonte_item.render(texto, True, self.cor_por_posicao(indice))
+					y_item = int(y_inicial + indice * espacamento)
+					self.window.blit(item, item.get_rect(center=(LARGURA // 2, y_item)))
 			else:
 				vazio = self.fonte_item.render('Nenhum recorde salvo ainda.', True, (200, 200, 200))
 				self.window.blit(vazio, vazio.get_rect(center=(LARGURA // 2, 360)))
@@ -77,4 +80,4 @@ class LeaderboardScreen:
 			self.window.blit(hint, hint.get_rect(center=(LARGURA // 2, ALTURA - 42)))
 
 			pygame.display.update()
-			self.clock.tick(FPS)
+			self.clock.tick(60)

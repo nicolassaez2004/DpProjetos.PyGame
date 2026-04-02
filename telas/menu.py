@@ -1,6 +1,7 @@
 import pygame
+import math
 
-from config.parametros import LARGURA, ALTURA, FPS
+from config.parametros import LARGURA, ALTURA, ASSETS
 
 
 class MenuScreen:
@@ -17,8 +18,6 @@ class MenuScreen:
 
 		self.opcoes = ['JOGAR', 'LEADERBOARD', 'SAIR']
 		self.indice_selecionado = 0
-		self.bg_top = (20, 18, 60)
-		self.bg_bottom = (60, 20, 90)
 		self.cor_titulo = (255, 220, 0)
 		self.cor_texto = (220, 220, 220)
 		self.cor_selecionado = (255, 220, 0)
@@ -27,48 +26,61 @@ class MenuScreen:
 		self.nome_digitado = ''
 		self.nome_maximo = 15
 
-	def _desenhar_fundo(self):
-		for y in range(ALTURA):
-			t = y / ALTURA
-			r = int(self.bg_top[0] * (1 - t) + self.bg_bottom[0] * t)
-			g = int(self.bg_top[1] * (1 - t) + self.bg_bottom[1] * t)
-			b = int(self.bg_top[2] * (1 - t) + self.bg_bottom[2] * t)
-			pygame.draw.line(self.window, (r, g, b), (0, y), (LARGURA, y))
-
-	def _retangulos_opcoes(self):
-		retangulos = []
+		self.fundo_menu = pygame.image.load(ASSETS + 'bgmenu.jpg')
+		self.fundo_menu = pygame.transform.scale(self.fundo_menu, (LARGURA, ALTURA))
+		self.titulo_surface = self.fonte_titulo.render('TRAPPED KNIGHT', True, self.cor_titulo)
+		self.titulo_sombra_surface = self.fonte_titulo.render('TRAPPED KNIGHT', True, (0, 0, 0))
 		y_inicial = ALTURA // 2 + 10
 		espacamento = 84
-		for indice, opcao in enumerate(self.opcoes):
-			cor = self.cor_selecionado if indice == self.indice_selecionado else self.cor_texto
-			texto = self.fonte_opcao.render(opcao, True, cor)
-			rect = texto.get_rect(center=(LARGURA // 2, y_inicial + indice * espacamento))
-			retangulos.append((texto, rect))
-		return retangulos
+		self.opcoes_rects = [
+			self.fonte_opcao.render(opcao, True, self.cor_texto).get_rect(center=(LARGURA // 2, y_inicial + indice * espacamento))
+			for indice, opcao in enumerate(self.opcoes)
+		]
 
-	def _desenhar_menu(self):
-		self._desenhar_fundo()
+	def desenhar_fundo(self):
+		self.window.blit(self.fundo_menu, (0, 0))
 
-		titulo_sombra = self.fonte_titulo.render('PITAGORAS OPS', True, (0, 0, 0))
-		titulo = self.fonte_titulo.render('PITAGORAS OPS', True, self.cor_titulo)
-		subtitulo = self.fonte_subtitulo.render('Sobreviva às ondas de inimigos!', True, (195, 195, 220))
+	def desenhar_menu(self):
+		tempo = pygame.time.get_ticks() / 1000.0
+		self.desenhar_fundo()
 
-		titulo_rect = titulo.get_rect(center=(LARGURA // 2, 190))
+		titulo_offset = int(4 * math.sin(tempo * 2.8))
+		titulo_escala = 1.0 + (0.06 * math.sin(tempo * 3.0))
+		largura_titulo = int(self.titulo_surface.get_width() * titulo_escala)
+		altura_titulo = int(self.titulo_surface.get_height() * titulo_escala)
+		titulo = pygame.transform.smoothscale(self.titulo_surface, (largura_titulo, altura_titulo))
+		titulo_sombra = pygame.transform.smoothscale(self.titulo_sombra_surface, (largura_titulo, altura_titulo))
+		subtitulo_offset = int(2 * math.sin(tempo * 2.0))
+		subtitulo_cor = (
+			195,
+			195,
+			220 + int(15 * (0.5 + 0.5 * math.sin(tempo * 2.8)))
+		)
+		subtitulo = self.fonte_subtitulo.render('Sobreviva às ondas de inimigos!', True, subtitulo_cor)
+
+		titulo_rect = titulo.get_rect(center=(LARGURA // 2, 190 + titulo_offset))
 		self.window.blit(titulo_sombra, (titulo_rect.x + 4, titulo_rect.y + 4))
 		self.window.blit(titulo, titulo_rect)
-		self.window.blit(subtitulo, subtitulo.get_rect(center=(LARGURA // 2, 270)))
+		self.window.blit(subtitulo, subtitulo.get_rect(center=(LARGURA // 2, 270 + subtitulo_offset)))
 
-		for texto, rect in self._retangulos_opcoes():
-			if texto.get_at((0, 0))[:3] == self.cor_selecionado:
+		mouse_pos = pygame.mouse.get_pos()
+		for indice, opcao in enumerate(self.opcoes):
+			rect = self.opcoes_rects[indice]
+			hover = rect.collidepoint(mouse_pos)
+			cor_texto = self.cor_selecionado if hover else ((235, 235, 235) if indice == self.indice_selecionado else self.cor_texto)
+			texto = self.fonte_opcao.render(opcao, True, cor_texto)
+			if hover:
 				destaque = pygame.Rect(rect.x - 24, rect.y - 12, rect.width + 48, rect.height + 20)
-				pygame.draw.rect(self.window, (72, 38, 110), destaque, border_radius=14)
+				pygame.draw.rect(self.window, (28, 74, 138), destaque, border_radius=14)
 				pygame.draw.rect(self.window, self.cor_selecionado, destaque, 3, border_radius=14)
+				self.indice_selecionado = indice
 			self.window.blit(texto, rect)
 
-		hint = self.fonte_hint.render('Use ↑↓ ou W/S para navegar | ENTER ou CLIQUE para selecionar', True, (160, 160, 190))
+		hint_alpha = 170 + int(35 * (0.5 + 0.5 * math.sin(tempo * 2.5)))
+		hint = self.fonte_hint.render('Use ↑↓ ou W/S para navegar | ENTER ou CLIQUE para selecionar', True, (hint_alpha, hint_alpha, 190))
 		self.window.blit(hint, hint.get_rect(center=(LARGURA // 2, ALTURA - 52)))
 
-	def _desenhar_popup_nome(self):
+	def desenhar_popup_nome(self):
 		overlay = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
 		overlay.fill((0, 0, 0, 155))
 		self.window.blit(overlay, (0, 0))
@@ -82,7 +94,7 @@ class MenuScreen:
 
 		nome = self.nome_digitado if self.nome_digitado else '|'
 		texto_nome = self.fonte_input.render(nome, True, (240, 240, 240))
-		texto_nome_rect = texto_nome.get_rect(midleft=(caixa.x + 22, caixa.centery))
+		texto_nome_rect = texto_nome.get_rect(center=caixa.center)
 		self.window.blit(texto_nome, texto_nome_rect)
 
 		limite = self.fonte_popup_hint.render(f'Máximo {self.nome_maximo} caracteres', True, (180, 180, 205))
@@ -95,36 +107,42 @@ class MenuScreen:
 		hint = self.fonte_popup_hint.render(instrucoes, True, (180, 180, 205))
 		self.window.blit(hint, hint.get_rect(center=(LARGURA // 2, 660)))
 
-	def _iniciar_popup_nome(self):
+	def iniciar_popup_nome(self):
 		self.popup_nome_aberto = True
 		self.nome_digitado = ''
 
-	def _aplicar_opcao(self):
+	def aplicar_opcao(self):
 		opcao = self.opcoes[self.indice_selecionado]
 		if opcao == 'JOGAR':
-			self._iniciar_popup_nome()
+			self.iniciar_popup_nome()
 			return None
 		if opcao == 'LEADERBOARD':
 			return ('LEADERBOARD', None)
 		return ('SAIR', None)
 
-	def _tratar_evento_menu(self, event):
+	def tratar_evento_menu(self, event):
 		if event.type == pygame.KEYDOWN:
 			if event.key in (pygame.K_UP, pygame.K_w):
 				self.indice_selecionado = (self.indice_selecionado - 1) % len(self.opcoes)
 			elif event.key in (pygame.K_DOWN, pygame.K_s):
 				self.indice_selecionado = (self.indice_selecionado + 1) % len(self.opcoes)
 			elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-				return self._aplicar_opcao()
+				return self.aplicar_opcao()
 
-		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-			for indice, (_, rect) in enumerate(self._retangulos_opcoes()):
+		if event.type == pygame.MOUSEMOTION:
+			for indice, rect in enumerate(self.opcoes_rects):
 				if rect.collidepoint(event.pos):
 					self.indice_selecionado = indice
-					return self._aplicar_opcao()
+					break
+
+		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+			for indice, rect in enumerate(self.opcoes_rects):
+				if rect.collidepoint(event.pos):
+					self.indice_selecionado = indice
+					return self.aplicar_opcao()
 		return None
 
-	def _tratar_evento_popup_nome(self, event):
+	def tratar_evento_popup_nome(self, event):
 		if event.type != pygame.KEYDOWN:
 			return None
 
@@ -135,6 +153,7 @@ class MenuScreen:
 		if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
 			nome = self.nome_digitado.strip()
 			if nome:
+				self.popup_nome_aberto = False
 				return ('JOGAR', nome)
 			return None
 
@@ -144,27 +163,31 @@ class MenuScreen:
 
 		if len(self.nome_digitado) < self.nome_maximo:
 			caractere = event.unicode
-			if caractere.isprintable() and not caractere.isspace():
+			if caractere.isprintable():
 				self.nome_digitado += caractere
 		return None
 
 	def executar(self):
+		# Garante que o popup só abre por ação explícita de "JOGAR"
+		self.popup_nome_aberto = False
+		self.nome_digitado = ''
+
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					return ('SAIR', None)
 
 				if self.popup_nome_aberto:
-					resultado = self._tratar_evento_popup_nome(event)
+					resultado = self.tratar_evento_popup_nome(event)
 					if resultado:
 						return resultado
 				else:
-					resultado = self._tratar_evento_menu(event)
+					resultado = self.tratar_evento_menu(event)
 					if resultado:
 						return resultado
 
-			self._desenhar_menu()
+			self.desenhar_menu()
 			if self.popup_nome_aberto:
-				self._desenhar_popup_nome()
+				self.desenhar_popup_nome()
 			pygame.display.update()
-			self.clock.tick(FPS)
+			self.clock.tick(60)

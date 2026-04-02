@@ -5,7 +5,6 @@ from enemies.skeleton import Skeleton
 from enemies.wizard import Wizard
 from jogo.objetos import Object
 from jogo.gameplay import Gameplay
-from config import parametros
 from config.parametros import ALTURA, LARGURA, PRETO, ASSETS, FPS
 from jogo.spawn import Spawn
 
@@ -33,7 +32,6 @@ class Game:
         self.font_overlay_texto = pygame.font.SysFont(None, 58)
         self.font_overlay_hint = pygame.font.SysFont(None, 52)
 
-        self.mouse_pos = pygame.Rect((0, 0), (0, 0))
         self.player = Gameplay((LARGURA/2 - 40, ALTURA/2 - 40))
 
         self.objeto = Object()
@@ -67,6 +65,8 @@ class Game:
         self.game_over = False
         self.game_over_inicio_ms = None
         self.game_over_duracao_ms = 2000
+        self.tela_flash_inicio_ms = 0
+        self.tela_flash_duracao_ms = 300
 
         self.preco_espada = 30
         self.preco_arco = 15
@@ -74,19 +74,19 @@ class Game:
         self.preco_vida = 1
         self.incremento_preco_vida = 1
 
-    def _tutorial_ativo(self):
+    def tutorial_ativo(self):
         if self.tutorial_pulado:
             return False
         tempo_passado = pygame.time.get_ticks() - self.tutorial_inicio_ms
         return tempo_passado < self.tutorial_duracao_ms
 
-    def _garantir_inicio_gameplay(self):
+    def garantir_inicio_gameplay(self):
         if self.inicio_gameplay_ms is None:
             agora_ms = pygame.time.get_ticks()
             self.inicio_gameplay_ms = agora_ms
             self.ultimo_bonus_score_ms = agora_ms
 
-    def _atualizar_bonus_score_por_tempo(self):
+    def atualizar_bonus_score_por_tempo(self):
         if self.ultimo_bonus_score_ms is None:
             return
 
@@ -96,21 +96,21 @@ class Game:
             self.player.score += int(segundos_completos) * 10
             self.ultimo_bonus_score_ms += int(segundos_completos) * 1000
 
-    def _tempo_decorrido_segundos(self):
+    def tempo_decorrido_segundos(self):
         if self.inicio_gameplay_ms is None:
             return 0
         agora_ms = pygame.time.get_ticks()
         return max(0, (agora_ms - self.inicio_gameplay_ms) // 1000)
 
-    def _desenhar_tempo(self):
-        tempo_total = self._tempo_decorrido_segundos()
+    def desenhar_tempo(self):
+        tempo_total = self.tempo_decorrido_segundos()
         minutos = tempo_total // 60
         segundos = tempo_total % 60
         tempo_text = self.font_tempo.render(f'{minutos}:{segundos:02d}', True, (255, 255, 255))
         self.window.blit(tempo_text, (24, 18))
 
-    def _desenhar_overlay_tutorial(self):
-        if not self._tutorial_ativo():
+    def desenhar_overlay_tutorial(self):
+        if not self.tutorial_ativo():
             return
 
         tempo_passado = pygame.time.get_ticks() - self.tutorial_inicio_ms
@@ -127,7 +127,10 @@ class Game:
         pygame.draw.rect(self.window, (88, 170, 255), painel, 5, border_radius=20)
 
         titulo = self.font_overlay_titulo.render('COMO JOGAR', True, (255, 220, 0))
-        self.window.blit(titulo, titulo.get_rect(center=(LARGURA // 2, painel.y + 84)))
+        self.window.blit(titulo, titulo.get_rect(center=(LARGURA // 2, painel.y + 74)))
+
+        fonte_linha = pygame.font.SysFont(None, 52)
+        fonte_objetivo = pygame.font.SysFont(None, 56)
 
         linhas = [
             ('WASD', '- Mover o personagem'),
@@ -136,25 +139,37 @@ class Game:
             ('ESC / P', '- Pausar o jogo')
         ]
 
-        y_texto = painel.y + 168
-        for comando, descricao in linhas:
-            comando_text = self.font_overlay_texto.render(comando, True, (95, 205, 255))
-            desc_text = self.font_overlay_texto.render(descricao, True, (230, 230, 230))
-            self.window.blit(comando_text, (painel.x + 48, y_texto))
-            self.window.blit(desc_text, (painel.x + 280, y_texto))
-            y_texto += 66
+        comandos_render = [fonte_linha.render(comando, True, (95, 205, 255)) for comando, _ in linhas]
+        descricoes_render = [fonte_linha.render(descricao, True, (230, 230, 230)) for _, descricao in linhas]
 
-        objetivo = self.font_overlay_texto.render('Objetivo: Sobreviva e derrote os inimigos!', True, (255, 190, 95))
-        self.window.blit(objetivo, objetivo.get_rect(center=(LARGURA // 2, painel.bottom - 84)))
+        max_largura_comando = max(texto.get_width() for texto in comandos_render)
+        x_comando = painel.x + 36
+        x_descricao = x_comando + max_largura_comando + 26
 
-        contador = self.font_overlay_hint.render(
-            f'Começando em {restante_segundos}s | ENTER ou Clique Esq. para pular',
-            True,
-            (205, 205, 225)
-        )
+        y_texto = painel.y + 150
+        espacamento_linha = 62
+        for comando_text, desc_text in zip(comandos_render, descricoes_render):
+            self.window.blit(comando_text, (x_comando, y_texto))
+            self.window.blit(desc_text, (x_descricao, y_texto))
+            y_texto += espacamento_linha
+
+        objetivo = fonte_objetivo.render('Objetivo: Sobreviva e derrote os inimigos!', True, (255, 190, 95))
+        self.window.blit(objetivo, objetivo.get_rect(center=(LARGURA // 2, painel.bottom - 72)))
+
+        contador_texto = f'Começando em {restante_segundos}s | ENTER ou Clique Esq. para pular'
+        tamanho_fonte_contador = 52
+        fonte_contador = pygame.font.SysFont(None, tamanho_fonte_contador)
+        contador = fonte_contador.render(contador_texto, True, (205, 205, 225))
+
+        largura_maxima_contador = painel.width - 40
+        while contador.get_width() > largura_maxima_contador and tamanho_fonte_contador > 30:
+            tamanho_fonte_contador -= 2
+            fonte_contador = pygame.font.SysFont(None, tamanho_fonte_contador)
+            contador = fonte_contador.render(contador_texto, True, (205, 205, 225))
+
         self.window.blit(contador, contador.get_rect(center=(LARGURA // 2, painel.bottom - 36)))
 
-    def _desenhar_overlay_game_over(self):
+    def desenhar_overlay_game_over(self):
         overlay = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 165))
         self.window.blit(overlay, (0, 0))
@@ -164,6 +179,13 @@ class Game:
 
         self.window.blit(titulo, titulo.get_rect(center=(LARGURA // 2, ALTURA // 2 - 60)))
         self.window.blit(score, score.get_rect(center=(LARGURA // 2, ALTURA // 2 + 20)))
+
+    def aplicar_tint_vermelho(self, surface):
+        tinted = surface.copy()
+        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        overlay.fill((120, 0, 0, 0))
+        tinted.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+        return tinted
 
     def desenhar_barra(self, pos, tamanho, valor_atual, valor_maximo, cor_preenchimento, cor_fundo):
         barra_rect = pygame.Rect(pos, tamanho)
@@ -194,7 +216,7 @@ class Game:
         score_rect = score_text.get_rect(center=(LARGURA // 2, 40))
         money_rect = money_text.get_rect(center=(LARGURA // 2, 90))
 
-        self._desenhar_tempo()
+        self.desenhar_tempo()
         self.window.blit(score_text, score_rect)
         self.window.blit(money_text, money_rect)
 
@@ -267,11 +289,6 @@ class Game:
                 arco_text = self.font_money.render(f"aperte E para comprar arco ({self.preco_arco}$)", True, (255, 255, 255))
             arco_rect = arco_text.get_rect(center=(LARGURA // 2, ALTURA // 2))
             self.window.blit(arco_text, arco_rect)
-
-        mouse_pos = pygame.mouse.get_pos()
-        tamanho_mouse = 10
-        self.mouse_pos = pygame.Rect(mouse_pos[0], mouse_pos[1], tamanho_mouse, tamanho_mouse)
-        pygame.draw.rect(self.window, parametros.MOUSE_COLOR, self.mouse_pos)
         
         self.todo_mundo.draw(self.window)
         self.spawn.inimigos.draw(self.window)
@@ -288,13 +305,32 @@ class Game:
         if self.player.espada_vento:
             self.window.blit(self.player.espada_vento_image_rotated, self.player.espada_vento)
 
-        self._desenhar_overlay_tutorial()
+        agora_render = pygame.time.get_ticks()
+
+        if agora_render - self.player.dano_flash_inicio_ms < self.player.dano_flash_duracao_ms:
+            tinted = self.aplicar_tint_vermelho(self.player.image)
+            self.window.blit(tinted, self.player.rect)
+
+        for inimigo in self.spawn.inimigos:
+            if isinstance(inimigo, Ghost):
+                if agora_render - inimigo.dano_flash_inicio_ms < inimigo.dano_flash_duracao_ms:
+                    tinted = self.aplicar_tint_vermelho(inimigo.image)
+                    self.window.blit(tinted, inimigo.rect)
+
+        if agora_render - self.tela_flash_inicio_ms < self.tela_flash_duracao_ms:
+            progresso = 1.0 - (agora_render - self.tela_flash_inicio_ms) / self.tela_flash_duracao_ms
+            alpha = int(80 * progresso)
+            tela_flash = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+            tela_flash.fill((255, 0, 0, alpha))
+            self.window.blit(tela_flash, (0, 0))
+
+        self.desenhar_overlay_tutorial()
         if self.game_over:
-            self._desenhar_overlay_game_over()
+            self.desenhar_overlay_game_over()
 
         pygame.display.update()
 
-    def _matar_inimigo(self, inimigo, com_capitalizacao=True):
+    def matar_inimigo(self, inimigo, com_capitalizacao=True):
         if isinstance(inimigo, Skeleton):
             for p in list(inimigo.flechas_disparadas):
                 inimigo.flechas_disparadas.remove(p)
@@ -307,21 +343,7 @@ class Game:
         if com_capitalizacao:
             self.player.capitalizacao(inimigo)
 
-    def colisoes(self): #testador de colisões
-        parametros.MOUSE_COLOR = (255, 255, 255)
-        if any(self.mouse_pos.colliderect(inimigo.rect) for inimigo in self.spawn.inimigos):
-            parametros.MOUSE_COLOR = (0, 255, 0)
-        elif self.mouse_pos.colliderect(self.objeto.plataforma):
-            parametros.MOUSE_COLOR = (125, 0, 0)
-            
-        if self.mouse_pos.colliderect(self.objeto.colisao_bau):
-            parametros.MOUSE_COLOR = (0, 0, 255)
-        if self.mouse_pos.colliderect(self.objeto.colisao_kitmedico):
-            parametros.MOUSE_COLOR = (0, 0, 255)
-        if self.mouse_pos.colliderect(self.objeto.colisao_arco):
-            parametros.MOUSE_COLOR = (0, 0, 255)
-        if self.mouse_pos.colliderect(self.objeto.colisao_espada):
-            parametros.MOUSE_COLOR = (0, 0, 255)
+    def colisoes(self):
 
         if self.player.rect.colliderect(self.objeto.colisao_espada):
             self.pode_comprar_espada = True
@@ -353,8 +375,11 @@ class Game:
             mascara_inimigo = pygame.mask.from_surface(inimigo.image)
             offset = (inimigo.rect.x - self.player.rect.x, inimigo.rect.y - self.player.rect.y)
             if self.player.mask.overlap(mascara_inimigo, offset):
-                self._matar_inimigo(inimigo, com_capitalizacao=False)
+                self.matar_inimigo(inimigo, com_capitalizacao=False)
                 self.player.vida = max(0, self.player.vida - 1)
+                agora_dano = pygame.time.get_ticks()
+                self.player.dano_flash_inicio_ms = agora_dano
+                self.tela_flash_inicio_ms = agora_dano
 
         agora_ms = pygame.time.get_ticks()
         if self.player.soco_vento:
@@ -364,7 +389,9 @@ class Game:
                     inimigo.ultimo_hit_ms = agora_ms
                     inimigo.health -= 10
                     if inimigo.health <= 0:
-                        self._matar_inimigo(inimigo)
+                        self.matar_inimigo(inimigo)
+                    elif isinstance(inimigo, Ghost):
+                        inimigo.dano_flash_inicio_ms = agora_ms
 
         if self.player.espada_vento_hitbox:
             for inimigo in list(self.spawn.inimigos):
@@ -373,7 +400,7 @@ class Game:
                     inimigo.ultimo_hit_ms = agora_ms
                     inimigo.health -= 20
                     if inimigo.health <= 0:
-                        self._matar_inimigo(inimigo)
+                        self.matar_inimigo(inimigo)
 
             for inimigo in self.spawn.inimigos:
                 if isinstance(inimigo, Skeleton):
@@ -405,7 +432,7 @@ class Game:
                     inimigo.health -= flecha.damage
                     flecha.kill()
                     if inimigo.health <= 0:
-                        self._matar_inimigo(inimigo)
+                        self.matar_inimigo(inimigo)
                     break
 
         for inimigo in self.spawn.inimigos:
@@ -420,6 +447,9 @@ class Game:
                 if flecha.mask.overlap(self.player.mask, offset):
                     flecha.kill()
                     self.player.vida = max(0, self.player.vida - 1)
+                    agora_dano = pygame.time.get_ticks()
+                    self.player.dano_flash_inicio_ms = agora_dano
+                    self.tela_flash_inicio_ms = agora_dano
 
         for inimigo in self.spawn.inimigos:
             if not isinstance(inimigo, Wizard):
@@ -433,6 +463,9 @@ class Game:
                 if fireball.mask.overlap(self.player.mask, offset):
                     fireball.kill()
                     self.player.vida = max(0, self.player.vida - 1)
+                    agora_dano = pygame.time.get_ticks()
+                    self.player.dano_flash_inicio_ms = agora_dano
+                    self.tela_flash_inicio_ms = agora_dano
 
         for flecha in list(self.flechas_orfas):
             deslocamento = flecha.direcao * flecha.velocidade
@@ -446,6 +479,9 @@ class Game:
                 if flecha.mask.overlap(self.player.mask, offset):
                     flecha.kill()
                     self.player.vida = max(0, self.player.vida - 1)
+                    agora_dano = pygame.time.get_ticks()
+                    self.player.dano_flash_inicio_ms = agora_dano
+                    self.tela_flash_inicio_ms = agora_dano
 
         for fireball in list(self.fireballs_orfas):
             centro_anterior = fireball.rect.center
@@ -464,10 +500,13 @@ class Game:
                 if fireball.mask.overlap(self.player.mask, offset):
                     fireball.kill()
                     self.player.vida = max(0, self.player.vida - 1)
+                    agora_dano = pygame.time.get_ticks()
+                    self.player.dano_flash_inicio_ms = agora_dano
+                    self.tela_flash_inicio_ms = agora_dano
 
     def executar(self):
         while self.rodando:
-            tutorial_ativo = self._tutorial_ativo()
+            tutorial_ativo = self.tutorial_ativo()
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -479,11 +518,11 @@ class Game:
                     if event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                         self.tutorial_pulado = True
                         tutorial_ativo = False
-                        self._garantir_inicio_gameplay()
+                        self.garantir_inicio_gameplay()
                     elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                         self.tutorial_pulado = True
                         tutorial_ativo = False
-                        self._garantir_inicio_gameplay()
+                        self.garantir_inicio_gameplay()
                     continue
 
                 if event.type == pygame.KEYDOWN:
@@ -506,8 +545,8 @@ class Game:
                         self.pode_interagir_kit = False
 
             if not self.game_over and not tutorial_ativo:
-                self._garantir_inicio_gameplay()
-                self._atualizar_bonus_score_por_tempo()
+                self.garantir_inicio_gameplay()
+                self.atualizar_bonus_score_por_tempo()
 
                 for inimigo in self.spawn.inimigos:
                     if inimigo.alive() and inimigo.health > 0:

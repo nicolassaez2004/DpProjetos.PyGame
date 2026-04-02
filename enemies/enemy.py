@@ -11,6 +11,8 @@ class Enemy(pygame.sprite.Sprite):
         self.speed = 2
         self.hit_cooldown_ms = 500
         self.ultimo_hit_ms = -self.hit_cooldown_ms
+        self.dano_flash_inicio_ms = 0
+        self.dano_flash_duracao_ms = 250
 
         self.pos_inicial = pygame.math.Vector2(posicao)
         self.rect = pygame.Rect(posicao, (80, 80))

@@ -11,7 +11,7 @@ class App:
     def __init__(self):
         pygame.init()
         self.window = pygame.display.set_mode((LARGURA, ALTURA))
-        pygame.display.set_caption('Pitagoras Ops')
+        pygame.display.set_caption('Trapped Knight')
 
         self.menu_screen = MenuScreen(self.window)
         self.leaderboard_screen = LeaderboardScreen(self.window)
@@ -36,7 +36,7 @@ class App:
                     resultado = jogo.executar()
 
                     self.window = pygame.display.set_mode((LARGURA, ALTURA))
-                    pygame.display.set_caption('Pitagoras Ops')
+                    pygame.display.set_caption('Trapped Knight')
                     self.menu_screen.window = self.window
                     self.leaderboard_screen.window = self.window
 
