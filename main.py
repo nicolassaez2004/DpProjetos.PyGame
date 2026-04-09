@@ -10,7 +10,7 @@ from telas.menu import MenuScreen
 class App:
     def __init__(self):
         pygame.init()
-        self.window = pygame.display.set_mode((LARGURA, ALTURA))
+        self.window = pygame.display.set_mode((LARGURA, ALTURA), pygame.FULLSCREEN)
         pygame.display.set_caption('Trapped Knight')
 
         self.menu_screen = MenuScreen(self.window)
@@ -32,10 +32,13 @@ class App:
                     ultimo_jogador = None
                     ultimo_score = None
                 elif acao == 'JOGAR':
+                    pygame.mixer.music.fadeout(2000)
+                    pygame.time.wait(2000)
+                    
                     jogo = Game(player_name=nome)
                     resultado = jogo.executar()
 
-                    self.window = pygame.display.set_mode((LARGURA, ALTURA))
+                    self.window = pygame.display.set_mode((LARGURA, ALTURA), pygame.FULLSCREEN)
                     pygame.display.set_caption('Trapped Knight')
                     self.menu_screen.window = self.window
                     self.leaderboard_screen.window = self.window
@@ -45,7 +48,9 @@ class App:
 
                     ultimo_jogador = resultado.get('nome')
                     ultimo_score = resultado.get('score', 0)
-                    self.leaderboard_repo.adicionar_pontuacao(ultimo_jogador, ultimo_score)
+                    ultimo_nivel = resultado.get('nivel', 1)
+                    ultimo_tempo_ms = resultado.get('tempo_ms', 0)
+                    self.leaderboard_repo.adicionar_pontuacao(ultimo_jogador, ultimo_score, ultimo_nivel, ultimo_tempo_ms)
                     estado = 'LEADERBOARD'
 
             elif estado == 'LEADERBOARD':

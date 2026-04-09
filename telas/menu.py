@@ -26,6 +26,12 @@ class MenuScreen:
 		self.nome_digitado = ''
 		self.nome_maximo = 15
 
+		self.som_click = pygame.mixer.Sound('assets/sons/sound_clickmenu.mp3')
+		self.som_select = pygame.mixer.Sound('assets/sons/sound_clickmenuselect.mp3')
+		self.som_start = pygame.mixer.Sound('assets/sons/sound_pressstart.mp3')
+		self.som_namedigit = pygame.mixer.Sound('assets/sons/sound_namedigit.mp3')
+		self.som_namedelete = pygame.mixer.Sound('assets/sons/sound_namedelete.mp3')
+
 		self.fundo_menu = pygame.image.load(ASSETS + 'bgmenu.jpg')
 		self.fundo_menu = pygame.transform.scale(self.fundo_menu, (LARGURA, ALTURA))
 		self.titulo_surface = self.fonte_titulo.render('TRAPPED KNIGHT', True, self.cor_titulo)
@@ -67,13 +73,13 @@ class MenuScreen:
 		for indice, opcao in enumerate(self.opcoes):
 			rect = self.opcoes_rects[indice]
 			hover = rect.collidepoint(mouse_pos)
-			cor_texto = self.cor_selecionado if hover else ((235, 235, 235) if indice == self.indice_selecionado else self.cor_texto)
+			selecionado = hover or indice == self.indice_selecionado
+			cor_texto = self.cor_selecionado if selecionado else self.cor_texto
 			texto = self.fonte_opcao.render(opcao, True, cor_texto)
-			if hover:
+			if selecionado:
 				destaque = pygame.Rect(rect.x - 24, rect.y - 12, rect.width + 48, rect.height + 20)
 				pygame.draw.rect(self.window, (28, 74, 138), destaque, border_radius=14)
 				pygame.draw.rect(self.window, self.cor_selecionado, destaque, 3, border_radius=14)
-				self.indice_selecionado = indice
 			self.window.blit(texto, rect)
 
 		hint_alpha = 170 + int(35 * (0.5 + 0.5 * math.sin(tempo * 2.5)))
@@ -114,25 +120,32 @@ class MenuScreen:
 	def aplicar_opcao(self):
 		opcao = self.opcoes[self.indice_selecionado]
 		if opcao == 'JOGAR':
+			self.som_select.play()
 			self.iniciar_popup_nome()
 			return None
 		if opcao == 'LEADERBOARD':
+			self.som_select.play()
 			return ('LEADERBOARD', None)
+		self.som_select.play()
 		return ('SAIR', None)
 
 	def tratar_evento_menu(self, event):
 		if event.type == pygame.KEYDOWN:
 			if event.key in (pygame.K_UP, pygame.K_w):
 				self.indice_selecionado = (self.indice_selecionado - 1) % len(self.opcoes)
+				self.som_click.play()
 			elif event.key in (pygame.K_DOWN, pygame.K_s):
 				self.indice_selecionado = (self.indice_selecionado + 1) % len(self.opcoes)
+				self.som_click.play()
 			elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
 				return self.aplicar_opcao()
 
 		if event.type == pygame.MOUSEMOTION:
 			for indice, rect in enumerate(self.opcoes_rects):
 				if rect.collidepoint(event.pos):
-					self.indice_selecionado = indice
+					if indice != self.indice_selecionado:
+						self.indice_selecionado = indice
+						self.som_click.play()
 					break
 
 		if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -153,24 +166,31 @@ class MenuScreen:
 		if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
 			nome = self.nome_digitado.strip()
 			if nome:
+				self.som_start.play()
 				self.popup_nome_aberto = False
 				return ('JOGAR', nome)
 			return None
 
 		if event.key == pygame.K_BACKSPACE:
-			self.nome_digitado = self.nome_digitado[:-1]
+			if self.nome_digitado:
+				self.nome_digitado = self.nome_digitado[:-1]
+				self.som_namedelete.play()
 			return None
 
 		if len(self.nome_digitado) < self.nome_maximo:
 			caractere = event.unicode
-			if caractere.isprintable():
+			if caractere and caractere.isprintable():
 				self.nome_digitado += caractere
+				self.som_namedigit.play()
 		return None
 
 	def executar(self):
-		# Garante que o popup só abre por ação explícita de "JOGAR"
 		self.popup_nome_aberto = False
 		self.nome_digitado = ''
+
+		if not pygame.mixer.music.get_busy():
+			pygame.mixer.music.load('assets/sons/ost_menu.mp3')
+			pygame.mixer.music.play(-1)
 
 		while True:
 			for event in pygame.event.get():

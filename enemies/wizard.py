@@ -35,13 +35,14 @@ class Wizard(Enemy):
         self.fireballs_disparadas = pygame.sprite.Group()
         self.cooldown_disparo_ms = 3600
         self.ultimo_disparo_ms = pygame.time.get_ticks()
+        self.som_fireball = pygame.mixer.Sound('assets/sons/sound_fireball.mp3')
 
     def criar_fireball(self, direcao):
         if direcao.length_squared() == 0:
             direcao = pygame.math.Vector2(1, 0)
 
         nivel_atual = getattr(self.player, 'nivel', 1)
-        multiplicador_nivel = 1 + (max(nivel_atual, 1) - 1) * 0.10
+        multiplicador_nivel = 1 + (max(nivel_atual, 1) - 1) * 0.20
 
         fireball = pygame.sprite.Sprite()
         fireball.direcao = direcao.normalize()
@@ -74,7 +75,10 @@ class Wizard(Enemy):
 
     def disparo(self):
         agora = pygame.time.get_ticks()
-        if (agora - self.ultimo_disparo_ms) < self.cooldown_disparo_ms:
+        nivel_atual = getattr(self.player, 'nivel', 1)
+        multiplicador_nivel = 1 + (max(nivel_atual, 1) - 1) * 0.10
+        cooldown_atual = int(self.cooldown_disparo_ms / multiplicador_nivel)
+        if (agora - self.ultimo_disparo_ms) < cooldown_atual:
             return
 
         if len(self.fireballs_disparadas) >= 1:
@@ -88,6 +92,7 @@ class Wizard(Enemy):
         fireball = self.criar_fireball(direcao)
         self.fireballs_disparadas.add(fireball)
         self.ultimo_disparo_ms = agora
+        self.som_fireball.play()
 
     def spawn_wizard(self):
         while True:

@@ -27,12 +27,20 @@ class LeaderboardRepository:
         with self.caminho_arquivo.open('w', encoding='utf-8') as arquivo:
             json.dump(ranking, arquivo, ensure_ascii=False, indent=2)
 
-    def adicionar_pontuacao(self, nome, score):
+    def adicionar_pontuacao(self, nome, score, nivel=1, tempo_ms=0):
         ranking = self.carregar()
+
+        tempo_segundos = tempo_ms // 1000
+        minutos = tempo_segundos // 60
+        segundos = tempo_segundos % 60
+        tempo_formatado = f"{minutos}:{segundos:02d}"
 
         nova_entrada = {
             'nome': nome,
             'score': int(score),
+            'nivel': int(nivel),
+            'tempo': tempo_formatado,
+            'tempo_ms': int(tempo_ms),
             'data': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         ranking.append(nova_entrada)

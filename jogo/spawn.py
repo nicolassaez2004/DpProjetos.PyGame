@@ -11,6 +11,7 @@ class Spawn:
         self.objeto = None
         self.spawn_cooldown_ms = 900
         self.ultimo_spawn_ms = 0
+        self.som_spawn_wizard = pygame.mixer.Sound('assets/sons/sound_spawnwizard.mp3')
     
     def spawn_inimigo(self):
             tem_ghost = any(isinstance(i, Ghost) for i in self.inimigos)
@@ -30,6 +31,8 @@ class Spawn:
             inimigo.rect.topleft = pos_spawn
             self.gameplay.aplicar_scaling_inimigo(inimigo)
             self.inimigos.add(inimigo)
+            if isinstance(inimigo, Wizard):
+                self.som_spawn_wizard.play()
 
     def atualizar_spawn_inimigos(self):
         agora = pygame.time.get_ticks()

@@ -17,8 +17,8 @@ class Game:
         
         self.bg = pygame.image.load(ASSETS + 'background.jpg')
         self.bg = pygame.transform.scale(self.bg, (1280, 720))
-        self.window = pygame.display.set_mode((LARGURA, ALTURA))
-        pygame.display.set_caption('Claustrophobia Knight')
+        self.window = pygame.display.set_mode((LARGURA, ALTURA), pygame.FULLSCREEN)
+        pygame.display.set_caption('Trapped Knight')
 
         self.relogio = pygame.time.Clock()
 
@@ -74,6 +74,20 @@ class Game:
         self.preco_flechas = 5
         self.preco_vida = 1
         self.incremento_preco_vida = 1
+
+        self.som_cash = pygame.mixer.Sound('assets/sons/sound_cash.mp3')
+        self.som_ghost_damage = pygame.mixer.Sound('assets/sons/sound_ghostdamage.mp3')
+        self.som_ghost_death = pygame.mixer.Sound('assets/sons/sound_ghostdeath.mp3')
+        self.som_skeleton_death = pygame.mixer.Sound('assets/sons/sound_skeletondeath.mp3')
+        self.som_wizard_death = pygame.mixer.Sound('assets/sons/sound_wizarddeath.mp3')
+        self.som_player_damage = pygame.mixer.Sound('assets/sons/sound_playerdamage.mp3')
+        self.som_hit_arrow = pygame.mixer.Sound('assets/sons/sound_hitarrow.mp3')
+        self.som_punchair = pygame.mixer.Sound('assets/sons/sound_punchair.mp3')
+        self.som_punchhit = pygame.mixer.Sound('assets/sons/sound_punchhit.mp3')
+        self.som_sword_hit = pygame.mixer.Sound('assets/sons/sound_swordhit.mp3')
+
+        self.ultimo_som_soco_ms = self.player.ultimo_soco_ms
+        self.ultimo_som_espada_ms = self.player.ultimo_espada_ms
 
     def tutorial_ativo(self):
         if self.tutorial_pulado:
@@ -336,10 +350,14 @@ class Game:
             for p in list(inimigo.flechas_disparadas):
                 inimigo.flechas_disparadas.remove(p)
                 self.flechas_orfas.add(p)
+            self.som_skeleton_death.play()
         elif isinstance(inimigo, Wizard):
             for p in list(inimigo.fireballs_disparadas):
                 inimigo.fireballs_disparadas.remove(p)
                 self.fireballs_orfas.add(p)
+            self.som_wizard_death.play()
+        elif isinstance(inimigo, Ghost):
+            self.som_ghost_death.play()
         inimigo.kill()
         if com_capitalizacao:
             self.gameplay.capitalizacao(inimigo)
@@ -378,21 +396,37 @@ class Game:
             if self.player.mask.overlap(mascara_inimigo, offset):
                 self.matar_inimigo(inimigo, com_capitalizacao=False)
                 self.player.vida = max(0, self.player.vida - 1)
+                self.som_player_damage.play()
                 agora_dano = pygame.time.get_ticks()
                 self.player.dano_flash_inicio_ms = agora_dano
                 self.tela_flash_inicio_ms = agora_dano
 
         agora_ms = pygame.time.get_ticks()
+
+        novo_soco = self.player.ultimo_soco_ms != self.ultimo_som_soco_ms
+        if novo_soco:
+            self.ultimo_som_soco_ms = self.player.ultimo_soco_ms
+            self.som_punchair.play()
+
+        novo_espada = self.player.ultimo_espada_ms != self.ultimo_som_espada_ms
+        if novo_espada:
+            self.ultimo_som_espada_ms = self.player.ultimo_espada_ms
+            self.som_sword_hit.play()
+            self.som_punchair.play()
+
         if self.player.soco_vento:
             for inimigo in list(self.spawn.inimigos):
                 pode_ser_atingido = (agora_ms - inimigo.ultimo_hit_ms) >= inimigo.hit_cooldown_ms
                 if self.player.soco_vento.colliderect(inimigo.rect) and inimigo.health > 0 and pode_ser_atingido:
                     inimigo.ultimo_hit_ms = agora_ms
                     inimigo.health -= 10
+                    self.som_punchhit.play()
+                    self.som_punchair.play()
                     if inimigo.health <= 0:
                         self.matar_inimigo(inimigo)
                     elif isinstance(inimigo, Ghost):
                         inimigo.dano_flash_inicio_ms = agora_ms
+                        self.som_ghost_damage.play()
 
         if self.player.espada_vento_hitbox:
             for inimigo in list(self.spawn.inimigos):
@@ -402,6 +436,9 @@ class Game:
                     inimigo.health -= 20
                     if inimigo.health <= 0:
                         self.matar_inimigo(inimigo)
+                    elif isinstance(inimigo, Ghost):
+                        inimigo.dano_flash_inicio_ms = agora_ms
+                        self.som_ghost_damage.play()
 
             for inimigo in self.spawn.inimigos:
                 if isinstance(inimigo, Skeleton):
@@ -431,6 +468,7 @@ class Game:
                 offset = (inimigo.rect.x - flecha.rect.x, inimigo.rect.y - flecha.rect.y)
                 if flecha.mask.overlap(mascara_inimigo, offset):
                     inimigo.health -= flecha.damage
+                    self.som_hit_arrow.play()
                     flecha.kill()
                     if inimigo.health <= 0:
                         self.matar_inimigo(inimigo)
@@ -448,6 +486,7 @@ class Game:
                 if flecha.mask.overlap(self.player.mask, offset):
                     flecha.kill()
                     self.player.vida = max(0, self.player.vida - 1)
+                    self.som_player_damage.play()
                     agora_dano = pygame.time.get_ticks()
                     self.player.dano_flash_inicio_ms = agora_dano
                     self.tela_flash_inicio_ms = agora_dano
@@ -464,6 +503,7 @@ class Game:
                 if fireball.mask.overlap(self.player.mask, offset):
                     fireball.kill()
                     self.player.vida = max(0, self.player.vida - 1)
+                    self.som_player_damage.play()
                     agora_dano = pygame.time.get_ticks()
                     self.player.dano_flash_inicio_ms = agora_dano
                     self.tela_flash_inicio_ms = agora_dano
@@ -480,6 +520,7 @@ class Game:
                 if flecha.mask.overlap(self.player.mask, offset):
                     flecha.kill()
                     self.player.vida = max(0, self.player.vida - 1)
+                    self.som_player_damage.play()
                     agora_dano = pygame.time.get_ticks()
                     self.player.dano_flash_inicio_ms = agora_dano
                     self.tela_flash_inicio_ms = agora_dano
@@ -501,11 +542,15 @@ class Game:
                 if fireball.mask.overlap(self.player.mask, offset):
                     fireball.kill()
                     self.player.vida = max(0, self.player.vida - 1)
+                    self.som_player_damage.play()
                     agora_dano = pygame.time.get_ticks()
                     self.player.dano_flash_inicio_ms = agora_dano
                     self.tela_flash_inicio_ms = agora_dano
 
     def executar(self):
+        pygame.mixer.music.load('assets/sons/ost_gameplay.mp3')
+        pygame.mixer.music.play(-1)
+
         while self.rodando:
             tutorial_ativo = self.tutorial_ativo()
 
@@ -531,19 +576,23 @@ class Game:
                         self.player.dinheiro -= self.preco_espada
                         self.player.equipar_espada()
                         self.pode_comprar_espada = False
+                        self.som_cash.play()
                     elif event.key == pygame.K_e and self.pode_interagir_arco and self.player.dinheiro >= self.preco_arco and self.player.estado_combate not in ('arco_soco', 'arco_espada'):
                         self.player.dinheiro -= self.preco_arco
                         self.player.equipar_arco()
                         self.pode_interagir_arco = False
+                        self.som_cash.play()
                     elif event.key == pygame.K_e and self.pode_interagir_bau and self.player.dinheiro >= self.preco_flechas and self.player.flechas < self.player.max_flechas and self.player.estado_combate in ('arco_soco', 'arco_espada'):
                         self.player.dinheiro -= self.preco_flechas
                         self.player.flechas = min(self.player.flechas + 5, self.player.max_flechas)
                         self.pode_interagir_bau = False
+                        self.som_cash.play()
                     elif event.key == pygame.K_e and self.pode_interagir_kit and self.player.vida < 10 and self.player.dinheiro >= self.preco_vida:
                         self.player.dinheiro -= self.preco_vida
                         self.player.vida = min(self.player.vida + 1, self.player.max_vida)
                         self.preco_vida += self.incremento_preco_vida
                         self.pode_interagir_kit = False
+                        self.som_cash.play()
 
             if not self.game_over and not tutorial_ativo:
                 self.garantir_inicio_gameplay()
@@ -569,16 +618,24 @@ class Game:
             if self.game_over and self.game_over_inicio_ms is not None:
                 tempo_game_over = pygame.time.get_ticks() - self.game_over_inicio_ms
                 if tempo_game_over >= self.game_over_duracao_ms:
+                    pygame.mixer.music.stop()
+                    tempo_sobrevivencia = (pygame.time.get_ticks() - self.inicio_gameplay_ms) if self.inicio_gameplay_ms else 0
                     return {
                         'status': 'GAME_OVER',
                         'nome': self.player_name,
-                        'score': self.gameplay.score
+                        'score': self.gameplay.score,
+                        'nivel': self.gameplay.nivel,
+                        'tempo_ms': tempo_sobrevivencia
                     }
 
             self.relogio.tick(FPS)
 
+        pygame.mixer.music.stop()
+        tempo_sobrevivencia = (pygame.time.get_ticks() - self.inicio_gameplay_ms) if self.inicio_gameplay_ms else 0
         return {
             'status': 'SAIR',
             'nome': self.player_name,
-            'score': self.gameplay.score
+            'score': self.gameplay.score,
+            'nivel': self.gameplay.nivel,
+            'tempo_ms': tempo_sobrevivencia
         }

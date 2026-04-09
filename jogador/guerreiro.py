@@ -126,15 +126,20 @@ class Guerreiro:
 
     def sprite_idle(self):
         self.atualizar_estado_combate()
-        if self.estado_combate == 'soco':
-            self.image = self.knight_parado if self.olhando_direita else self.knight_parado_flip
-        elif self.estado_combate == 'espada':
-            self.image = self.knight_espada if self.olhando_direita else self.knight_espada_flip
-        elif self.estado_combate == 'arco_soco':
-            self.image = self.knight_arco_soco if self.olhando_direita else self.knight_arco_soco_flip
-        elif self.estado_combate == 'arco_espada':
-            self.image = self.knight_arco_espada if self.olhando_direita else self.knight_arco_espada_flip
-        self.mask = pygame.mask.from_surface(self.image)
+        
+        if hasattr(self, 'atualizar_sprite_movimento'):
+            self.atualizar_sprite_movimento()
+        else:
+            if self.estado_combate == 'soco':
+                self.image = self.knight_parado if self.olhando_direita else self.knight_parado_flip
+            elif self.estado_combate == 'espada':
+                self.image = self.knight_espada if self.olhando_direita else self.knight_espada_flip
+            elif self.estado_combate == 'arco_soco':
+                self.image = self.knight_arco_soco if self.olhando_direita else self.knight_arco_soco_flip
+            elif self.estado_combate == 'arco_espada':
+                self.image = self.knight_arco_espada if self.olhando_direita else self.knight_arco_espada_flip
+            self.mask = pygame.mask.from_surface(self.image)
+        
         self.soco_vento = None
         self.espada_vento = None
         self.espada_vento_hitbox = None
@@ -158,7 +163,9 @@ class Guerreiro:
             soco_ativo = agora < self.soco_vento_expira_ms
             espada_ativa = agora < self.espada_vento_expira_ms
             if not soco_ativo and not espada_ativa:
-                self.sprite_idle()
+                esta_andando = self.velocidade.x != 0 or self.velocidade.y != 0
+                if not esta_andando:
+                    self.sprite_idle()
 
     def ataque_arco(self, mouse_pos):
         self.image = self.knight_arco_espada if self.estado_combate == 'arco_espada' else self.knight_arco_soco
@@ -186,3 +193,4 @@ class Guerreiro:
         self.flechas_disparadas.add(flecha)
         self.flechas -= 1
         self.ultimo_disparo_flecha_ms = agora
+        self.som_player_arrow.play()

@@ -25,13 +25,14 @@ class Skeleton(Enemy):
         self.flechas_disparadas = pygame.sprite.Group()
         self.cooldown_disparo_ms = 3000
         self.ultimo_disparo_ms = pygame.time.get_ticks()
+        self.som_skeleton_arrow = pygame.mixer.Sound('assets/sons/sound_skeletonarrow.mp3')
 
     def criar_flecha(self, direcao):
         if direcao.length_squared() == 0:
             direcao = pygame.math.Vector2(1, 0)
 
         nivel_atual = getattr(self.player, 'nivel', 1)
-        multiplicador_nivel = 1 + (max(nivel_atual, 1) - 1) * 0.10
+        multiplicador_nivel = 1 + (max(nivel_atual, 1) - 1) * 0.35
 
         flecha = pygame.sprite.Sprite()
         flecha.direcao = direcao.normalize()
@@ -57,7 +58,10 @@ class Skeleton(Enemy):
 
     def disparo(self):
         agora = pygame.time.get_ticks()
-        if (agora - self.ultimo_disparo_ms) < self.cooldown_disparo_ms:
+        nivel_atual = getattr(self.player, 'nivel', 1)
+        multiplicador_nivel = 1 + (max(nivel_atual, 1) - 1) * 0.10
+        cooldown_atual = int(self.cooldown_disparo_ms / multiplicador_nivel)
+        if (agora - self.ultimo_disparo_ms) < cooldown_atual:
             return
 
         direcao = pygame.math.Vector2(
@@ -68,6 +72,7 @@ class Skeleton(Enemy):
         flecha = self.criar_flecha(direcao)
         self.flechas_disparadas.add(flecha)
         self.ultimo_disparo_ms = agora
+        self.som_skeleton_arrow.play()
 
     def movimentacao(self):
         direcao = pygame.math.Vector2(
