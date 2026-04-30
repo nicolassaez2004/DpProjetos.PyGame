@@ -1,2 +1,3 @@
 - Fazer efeitos sonoros
 - Inserir trilha sonora
+- usar ws para navegar não está funcionando

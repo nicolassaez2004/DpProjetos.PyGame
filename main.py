@@ -45,6 +45,9 @@ class App:
 
                     if resultado.get('status') == 'SAIR':
                         break
+                    if resultado.get('status') == 'MENU':
+                        estado = 'MENU'
+                        continue
 
                     ultimo_jogador = resultado.get('nome')
                     ultimo_score = resultado.get('score', 0)

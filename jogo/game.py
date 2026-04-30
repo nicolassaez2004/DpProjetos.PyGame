@@ -59,11 +59,12 @@ class Game:
         self.fireballs_orfas = pygame.sprite.Group()
 
         self.tutorial_inicio_ms = pygame.time.get_ticks()
-        self.tutorial_duracao_ms = 5000
+        self.tutorial_duracao_ms = 15000
         self.tutorial_pulado = False
         self.inicio_gameplay_ms = None
         self.ultimo_bonus_score_ms = None
         self.game_over = False
+        self.pausado = False
         self.game_over_inicio_ms = None
         self.game_over_duracao_ms = 2000
         self.tela_flash_inicio_ms = 0
@@ -183,6 +184,27 @@ class Game:
             contador = fonte_contador.render(contador_texto, True, (205, 205, 225))
 
         self.window.blit(contador, contador.get_rect(center=(LARGURA // 2, painel.bottom - 36)))
+
+    def desenhar_overlay_pause(self):
+        painel = pygame.Rect(220, 110, LARGURA - 440, ALTURA - 220)
+        overlay = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 140))
+        self.window.blit(overlay, (0, 0))
+
+        pygame.draw.rect(self.window, (18, 55, 110), painel, border_radius=20)
+        pygame.draw.rect(self.window, (140, 215, 255), painel, 5, border_radius=20)
+
+        titulo = self.font_overlay_titulo.render('PAUSADO', True, (255, 220, 0))
+        self.window.blit(titulo, titulo.get_rect(center=(LARGURA // 2, painel.y + 74)))
+
+        descricao = self.font_overlay_texto.render('O jogo está pausado.', True, (230, 230, 230))
+        dica = self.font_overlay_hint.render('Pressione ESC ou P para continuar', True, (180, 240, 255))
+
+        self.window.blit(descricao, descricao.get_rect(center=(LARGURA // 2, painel.y + 180)))
+        self.window.blit(dica, dica.get_rect(center=(LARGURA // 2, painel.y + 250)))
+
+        dica_menu = self.font_overlay_hint.render('Pressione M para voltar ao menu', True, (180, 240, 255))
+        self.window.blit(dica_menu, dica_menu.get_rect(center=(LARGURA // 2, painel.y + 320)))
 
     def desenhar_overlay_game_over(self):
         overlay = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
@@ -340,6 +362,8 @@ class Game:
             self.window.blit(tela_flash, (0, 0))
 
         self.desenhar_overlay_tutorial()
+        if self.pausado:
+            self.desenhar_overlay_pause()
         if self.game_over:
             self.desenhar_overlay_game_over()
 
@@ -572,6 +596,21 @@ class Game:
                     continue
 
                 if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_p) and not tutorial_ativo and not self.game_over:
+                        self.pausado = not self.pausado
+                        continue
+                    if self.pausado:
+                        if event.key == pygame.K_m:
+                            pygame.mixer.music.stop()
+                            tempo_sobrevivencia = (pygame.time.get_ticks() - self.inicio_gameplay_ms) if self.inicio_gameplay_ms else 0
+                            return {
+                                'status': 'MENU',
+                                'nome': self.player_name,
+                                'score': self.gameplay.score,
+                                'nivel': self.gameplay.nivel,
+                                'tempo_ms': tempo_sobrevivencia
+                            }
+                        continue
                     if event.key == pygame.K_e and self.pode_comprar_espada and self.player.dinheiro >= self.preco_espada:
                         self.player.dinheiro -= self.preco_espada
                         self.player.equipar_espada()
@@ -594,7 +633,7 @@ class Game:
                         self.pode_interagir_kit = False
                         self.som_cash.play()
 
-            if not self.game_over and not tutorial_ativo:
+            if not self.game_over and not tutorial_ativo and not self.pausado:
                 self.garantir_inicio_gameplay()
                 self.atualizar_bonus_score_por_tempo()
 
